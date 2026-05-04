@@ -158,16 +158,21 @@ class SingularityIP:
 # ==========================================
 # 3. 几何网格场景基类
 # ==========================================
-class EllipseBase(ThreeDScene):
+class EllipseBase:
     """
-    科幻网格场景基类。
-    继承此类的 Scene 将自动获得深色背景和酷炫的网格展开/消除动画。
+    科幻网格场景工具类。
+    提供网格创建、展开/消除动画、标题生成等功能。
+    使用方式：el = EllipseBase(self)，然后调用 el.xxx()
     """
 
-    def setup(self):
-        # 强制设置背景色
-        self.camera.background_color = NeonTheme.BG_COLOR
+    def __init__(self, scene: Scene):
+        """保存场景引用，创建网格"""
+        self.scene = scene
 
+        # 自动设置背景色
+        self.scene.camera.background_color = NeonTheme.BG_COLOR
+
+        # 创建网格
         self.grid = NumberPlane(
             x_range=[-10, 10, 1],
             y_range=[-6, 6, 1],
@@ -185,13 +190,13 @@ class EllipseBase(ThreeDScene):
         axes = self.grid.axes
         axes.set_stroke(width=4, color=WHITE, opacity=0)
 
-        self.play(
+        self.scene.play(
             axes.animate.set_stroke(opacity=1),
             GrowFromCenter(axes),
             run_time=1.0,
             rate_func=rush_from,
         )
-        self.play(
+        self.scene.play(
             axes.animate.set_stroke(
                 width=2, color=NeonTheme.COLOR_ELLIPSE, opacity=0.8
             ),
@@ -224,7 +229,7 @@ class EllipseBase(ThreeDScene):
             return anims
 
         # --- 步骤 3：波浪式扫描展开 ---
-        self.play(
+        self.scene.play(
             LaggedStart(*get_line_anim(v_lines), lag_ratio=0.06),
             LaggedStart(*get_line_anim(h_lines), lag_ratio=0.06),
             run_time=3.0,
@@ -234,22 +239,24 @@ class EllipseBase(ThreeDScene):
         flash_rect = FullScreenRectangle(
             fill_opacity=0.1, fill_color=WHITE, stroke_width=0
         )
-        self.play(FadeIn(flash_rect, run_time=0.1), FadeOut(flash_rect, run_time=0.4))
-        self.add(self.grid)
-        self.wait(0.5)
+        self.scene.play(
+            FadeIn(flash_rect, run_time=0.1), FadeOut(flash_rect, run_time=0.4)
+        )
+        self.scene.add(self.grid)
+        self.scene.wait(0.5)
 
     def animate_grid_removal(self):
         """播放网格科幻内爆消除动画"""
 
         # 1. 让背景辅助线黯淡并消失
-        self.play(FadeOut(self.grid.background_lines), run_time=0.8)
+        self.scene.play(FadeOut(self.grid.background_lines), run_time=0.8)
 
         # 2. 让主坐标轴从四周往中心极速收缩（逆向展开）
-        self.play(Uncreate(self.grid.axes), run_time=0.6, rate_func=smooth)
+        self.scene.play(Uncreate(self.grid.axes), run_time=0.6, rate_func=smooth)
 
         # 3. 彻底从场景中移除实体
-        self.remove(self.grid)
-        self.wait(0.2)
+        self.scene.remove(self.grid)
+        self.scene.wait(0.2)
 
     def get_header(self, title_str: str, formula_str: str) -> VGroup:
         """快速生成统一风格的标题与公式头"""
@@ -258,3 +265,7 @@ class EllipseBase(ThreeDScene):
         )
         formula = MathTex(formula_str, color=NeonTheme.TEXT)
         return VGroup(title, formula).arrange(DOWN, buff=0.4).move_to(ORIGIN)
+
+    def c2p(self, *args, **kwargs):
+        """代理方法：将坐标转换为场景坐标"""
+        return self.grid.c2p(*args, **kwargs)

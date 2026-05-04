@@ -161,6 +161,9 @@ class AudioContext:
                 # 默认蓝绿色渐变，很有科技感
                 self.subtitle_mob.set_color_by_gradient("#00E5FF", "#0077FF")
 
+            if hasattr(self.scene, "add_fixed_in_frame_mobjects"):
+                self.scene.add_fixed_in_frame_mobjects(self.subtitle_mob)
+
             write_time = min(0.6, self.duration * 0.3)
             self.scene.play(Write(self.subtitle_mob), run_time=write_time)
 
@@ -181,6 +184,8 @@ class AudioContext:
             self.scene.play(
                 FadeOut(self.subtitle_mob, shift=DOWN * 0.3), run_time=fade_time
             )
+        if hasattr(self.scene, "remove_fixed_in_frame_mobjects"):
+            self.scene.remove_fixed_in_frame_mobjects(self.subtitle_mob)
         return False
 
 

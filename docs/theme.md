@@ -20,6 +20,7 @@
 | `TEXT` | `str` | `"#E6E6E6"` | 标准正文颜色（高亮灰），相较纯白在深色背景下更护眼。 |
 
 ### 使用示例
+
 ```python
 from manim import Text, BOLD
 from manim_singularity import NeonTheme
@@ -36,19 +37,24 @@ text = Text("普通正文", color=NeonTheme.TEXT)
 **描述**：厂牌级片头转场引擎。负责生成标准化的开场动画，并支持将核心图形动态平滑地转换为当前视频的正片标题。
 
 ### `__init__(self, scene: Scene)`
+
 - **`scene`**: 当前正在渲染的 Manim `Scene` 实例，动画将直接作用于该场景。
 
 ### `play_intro(self, target_title=None, *, keep_final=False) -> Optional[Mobject]`
+
 播放完整的片头动画序列（轨道展开 -> 核心闪烁 -> 细节绽放 -> 变形离场）。
 
 **参数 (Parameters):**
+
 - **`target_title`** (`Optional[Mobject]`, 默认: `None`): 目标标题对象。若传入，片头几何体将在尾声变形成该对象，并执行下沉蓄力后向上飞出的转场特效。
 - **`keep_final`** (`bool`, 默认: `False`): 仅在 `target_title` 为 `None` 时生效。若设为 `True`，片头 Logo 将保留在画面中央不退出；若设为 `False`，Logo 将自动飞出画面淡出。
 
 **返回值 (Returns):**
+
 - 返回转场结束时留在画面上（或刚刚淡出）的最终 `Mobject`（即 `target_title` 或 Logo 组合），可用于后续的动画接力。
 
 ### 使用示例
+
 ```python
 from manim import Scene, Text
 from manim_singularity import SingularityIP, NeonTheme
@@ -73,29 +79,38 @@ class IntroExample(Scene):
 该基类在其生命周期的 `setup()` 阶段，会自动将背景设为 `NeonTheme.BG_COLOR`，并实例化一个标准坐标平面 `self.grid`。
 
 ### 属性 (Attributes)
+
 - **`self.grid`** (`NumberPlane`): 覆盖全屏的底层坐标系。你可以直接调用 `self.grid.plot()` 或 `self.grid.c2p()` 进行函数与坐标点绘制。
 
 ### `animate_grid_growth(self)`
+
 **描述**：播放网格系统的初始化动画。包含主轴爆发、背景网格线提取及波浪式雷达扫描展开，并在结尾伴随全屏高光冲击波。
+
 - **动画时长**: 约 `5.6` 秒。
 - **状态变更**: 执行完毕后，`self.grid` 将正式被添加到场景中。
 
 ### `animate_grid_removal(self)`
+
 **描述**：播放网格系统的销毁动画。背景辅助线先行黯淡隐去，随后主轴向中心极速收缩（内爆），用于在视频高潮阶段剥离坐标系束缚。
+
 - **动画时长**: 约 `1.6` 秒。
 - **状态变更**: 执行完毕后，`self.grid` 将从场景中被彻底移除（`remove`）。
 
 ### `get_header(self, title_str: str, formula_str: str) -> VGroup`
+
 **描述**：快速生成符合规范的顶部说明栏（主标题 + 副公式）。
 
 **参数 (Parameters):**
+
 - **`title_str`** (`str`): 主标题文本。
 - **`formula_str`** (`str`): LaTeX 公式字符串。
 
 **返回值 (Returns):**
+
 - `VGroup`: 经过自动排版与着色的组合对象，默认居中于 `ORIGIN`，可使用 `.to_edge(UP)` 移动至屏幕顶部。
 
 ### 使用示例
+
 ```python
 from manim import *
 from manim_singularity import EllipseBase
