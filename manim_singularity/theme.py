@@ -113,7 +113,7 @@ class SingularityIP:
                 run_time=0.5,
                 rate_func=rush_into,
             )
-            final_mob = target_title
+            self.scene.remove(target_title)
 
         elif not keep_final:
             full_logo = VGroup(
@@ -138,6 +138,7 @@ class SingularityIP:
                 run_time=0.5,
                 rate_func=rush_into,
             )
+            self.scene.remove(full_logo)
         else:
             final_mob = VGroup(
                 outer_ring,

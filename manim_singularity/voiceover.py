@@ -153,6 +153,7 @@ class AudioContext:
             kwargs = {"font_size": 32, "line_spacing": 1.2, "weight": BOLD}
             kwargs.update(self.subtitle_kwargs)
             self.subtitle_mob = Text(self.text, **kwargs).to_edge(DOWN, buff=0.5)
+            self.subtitle_mob._is_subtitle = True
 
             if (
                 "color" not in self.subtitle_kwargs
