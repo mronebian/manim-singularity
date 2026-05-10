@@ -1,5 +1,5 @@
-# 从当前目录的 voiceover.py 文件中引入配音相关的类
-from .voiceover import VoiceOver, AudioContext, VoiceManager
+# 从 voiceover 包中引入主接口类
+from .voiceover import VoiceOver
 
 # 从当前目录的 theme.py 文件中引入主题相关的类
 from .theme import NeonTheme, SingularityIP, EllipseBase
@@ -8,8 +8,6 @@ from .theme import NeonTheme, SingularityIP, EllipseBase
 # 只能导入下面列表里的这些名字（保护内部私有代码不被暴露）
 __all__ = [
     "VoiceOver",
-    "AudioContext",
-    "VoiceManager",
     "NeonTheme",
     "SingularityIP",
     "EllipseBase",
