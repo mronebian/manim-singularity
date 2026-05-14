@@ -1,3 +1,5 @@
+import os
+
 from manim import *
 from typing import Optional
 
@@ -14,6 +16,13 @@ class NeonTheme:
     COLOR_GRID = "#1A2639"  # 暗蓝色（用于底层网格，防止喧宾夺主）
     COLOR_TITLE = ("#00E5FF", "#0077FF")  # 标题默认渐变色（青到蓝）
     TEXT = "#E6E6E6"  # 正文灰白色（比纯白更护眼）
+
+    # B站片尾三连配色
+    BILI_LIKE = "#FB7299"
+    BILI_COIN = "#F5A623"
+    BILI_FAVO = "#FFC107"
+    # 非B站模式片尾配色
+    ENDING_FALLBACK = ("#FF69B4", "#FF69B4", "#FF69B4")
 
 
 # ==========================================
@@ -270,3 +279,271 @@ class EllipseBase:
     def c2p(self, *args, **kwargs):
         """代理方法：将坐标转换为场景坐标"""
         return self.grid.c2p(*args, **kwargs)
+
+
+# ==========================================
+# 4. 片尾一键三连卡片
+# ==========================================
+
+
+class EndingCard:
+    """奇点 IP 片尾一键三连卡片（点赞、投币、收藏）"""
+
+    _SVG_DIR = os.path.join(os.path.dirname(__file__), "..", "svg")
+
+    def __init__(self, scene: Scene, exclude_mobjects: list = None):
+        self.scene = scene
+        self.exclude_mobjects = exclude_mobjects if exclude_mobjects is not None else []
+        self.left_threshold = -2.5
+        self.right_threshold = 2.5
+
+    # ── 兼容性包装方法 ──
+    def _safe_set_glow(self, mob, value):
+        if hasattr(mob.__class__, "set_glow"):
+            mob.set_glow(value)
+        return mob
+
+    # ── 内部工具方法 ──────────────────────────────
+
+    def _load_icon(self, name: str) -> SVGMobject:
+        svg_path = os.path.join(self._SVG_DIR, f"{name}.svg")
+        if not os.path.exists(svg_path):
+            icon = (
+                Circle(radius=0.6)
+                .set_fill(WHITE, opacity=1)
+                .set_stroke(WHITE, opacity=0)
+            )
+        else:
+            icon = (
+                SVGMobject(svg_path)
+                .scale(1.2)
+                .set_fill(WHITE, opacity=1)
+                .set_stroke(WHITE, opacity=0)
+            )
+        return self._safe_set_glow(icon, 0.3)
+
+    def _build_icons(self) -> VGroup:
+        good = self._load_icon("good")
+        coin = self._load_icon("coin")
+        favo = self._load_icon("favo")
+        icons = VGroup(good, coin, favo)
+        icons.arrange(RIGHT, buff=1.5).move_to(ORIGIN).shift(UP)
+        return icons
+
+    def _collect_mobjects(self):
+        excluded_types = (NumberPlane, Axes, ThreeDAxes)
+        mobs = []
+        for m in self.scene.mobjects:
+            if isinstance(m, excluded_types):
+                continue
+            if m in self.exclude_mobjects:
+                continue
+            is_visible = True
+            has_fill = hasattr(m, "fill_opacity")
+            has_stroke = hasattr(m, "stroke_opacity")
+            if has_fill or has_stroke:
+                fill_op = getattr(m, "fill_opacity", 0)
+                stroke_op = getattr(m, "stroke_opacity", 0)
+                if (fill_op or 0) < 0.01 and (stroke_op or 0) < 0.01:
+                    is_visible = False
+            if is_visible:
+                mobs.append(m)
+        return mobs
+
+    # ── 公共入口 ──────────────────────────────────
+
+    def play_ending(self, mode: str = "A", bilibili_style: bool = True):
+        icons = self._build_icons()
+        mode = mode.upper()
+
+        if mode == "A":
+            self._mode_converge(icons)
+        elif mode == "B":
+            self._mode_morph(icons)
+        elif mode == "C":
+            self._mode_assign(icons)
+
+        if bilibili_style:
+            self._bilibili_activation(icons)
+
+        self._show_text_and_settle(icons, bilibili_style)
+
+    # ── Phase 1: 三种场景变换 ─────────────────────
+
+    def _mode_converge(self, icons: VGroup):
+        targets = [icon.get_center() for icon in icons]
+        mobs = self._collect_mobjects()
+
+        if mobs:
+            self.scene.play(
+                *[m.animate.scale(0).move_to(ORIGIN).set_opacity(0) for m in mobs],
+                run_time=0.8,
+                rate_func=smooth,
+            )
+            self.scene.remove(*mobs)
+
+        self.scene.play(
+            Flash(ORIGIN, color=WHITE, line_length=0.8, num_lines=16),
+            run_time=0.3,
+        )
+
+        ghosts = [icon.copy().move_to(ORIGIN).scale(0) for icon in icons]
+        for icon, pos in zip(icons, targets):
+            icon.move_to(pos)
+
+        self.scene.play(
+            LaggedStart(
+                *[
+                    ReplacementTransform(
+                        g, icon, rate_func=rate_functions.ease_out_elastic
+                    )
+                    for g, icon in zip(ghosts, icons)
+                ],
+                lag_ratio=0.15,
+            ),
+            run_time=1.5,
+        )
+
+    def _mode_morph(self, icons: VGroup):
+        mobs = self._collect_mobjects()
+        if not mobs:
+            self._mode_converge(icons)
+            return
+
+        left, mid, right = [], [], []
+        for m in mobs:
+            x = m.get_center()[0]
+            if x < self.left_threshold:
+                left.append(m)
+            elif x > self.right_threshold:
+                right.append(m)
+            else:
+                mid.append(m)
+
+        self._transform_groups([left, mid, right], icons)
+
+    def _mode_assign(self, icons: VGroup):
+        mobs = self._collect_mobjects()
+        if not mobs:
+            self._mode_converge(icons)
+            return
+
+        mobs.sort(key=lambda m: m.get_center()[0])
+        n = len(mobs)
+
+        if n == 1:
+            groups = [[], mobs, []]
+        elif n == 2:
+            groups = [[mobs[0]], [], [mobs[1]]]
+        else:
+            q, r = divmod(n, 3)
+            groups = []
+            start = 0
+            for i in range(3):
+                size = q + (1 if i < r else 0)
+                groups.append(mobs[start:start + size])
+                start += size
+
+        self._transform_groups(groups, icons)
+
+    def _transform_groups(self, groups: list, icons: VGroup):
+        animations = []
+        for group, icon in zip(groups, icons):
+            if group:
+                vmobs = [m for m in group if isinstance(m, VMobject)]
+                non_vmobs = [m for m in group if not isinstance(m, VMobject)]
+
+                if vmobs:
+                    animations.append(ReplacementTransform(VGroup(*vmobs), icon))
+                else:
+                    animations.append(FadeIn(icon, scale=0.5))
+
+                if non_vmobs:
+                    animations.append(FadeOut(Group(*non_vmobs)))
+            else:
+                animations.append(FadeIn(icon, scale=0.5))
+
+        if animations:
+            self.scene.play(*animations, run_time=1.2, rate_func=smooth)
+
+    # ── Phase 2: B 站风格点亮 ────────────────────
+
+    def _bilibili_activation(self, icons: VGroup):
+        colors = [NeonTheme.BILI_LIKE, NeonTheme.BILI_COIN, NeonTheme.BILI_FAVO]
+
+        for icon, color in zip(icons, colors):
+            self.scene.wait(0.08)
+
+            self.scene.play(
+                icon.animate.set_fill(color, opacity=1).scale(1.35),
+                run_time=0.28,
+                rate_func=rate_functions.ease_out_elastic,
+            )
+            self._safe_set_glow(icon, 1.0)
+
+            self.scene.play(
+                icon.animate.scale(1 / 1.35 * 0.95),
+                run_time=0.12,
+                rate_func=smooth,
+            )
+            self._safe_set_glow(icon, 0.5)
+
+            self.scene.play(
+                icon.animate.scale(1 / 0.95),
+                run_time=0.10,
+                rate_func=smooth,
+            )
+            self._safe_set_glow(icon, 0.3)
+
+    # ── Phase 3: 文字 + 心跳 ──────────────────────
+
+    def _show_text_and_settle(self, icons: VGroup, bilibili_style: bool):
+        text = Text("一键三连", font_size=50, color=WHITE, weight=BOLD)
+        text.next_to(icons, DOWN, buff=0.8)
+
+        comment = Text(
+            "如果有什么想法，欢迎在评论区留言",
+            font_size=26,
+            color=GRAY,
+        )
+        comment.next_to(text, DOWN, buff=0.3)
+
+        self.scene.play(Write(text), run_time=0.6)
+        self.scene.play(Write(comment), run_time=0.5)
+
+        final_colors = (
+            [NeonTheme.BILI_LIKE, NeonTheme.BILI_COIN, NeonTheme.BILI_FAVO]
+            if bilibili_style
+            else list(NeonTheme.ENDING_FALLBACK)
+        )
+
+        self.scene.play(
+            *[
+                icon.animate.scale(1.2).set_fill(color, opacity=1)
+                for icon, color in zip(icons, final_colors)
+            ],
+            text.animate.scale(1.05).set_color(final_colors[0]),
+            run_time=0.3,
+            rate_func=rate_functions.ease_out_back,
+        )
+
+        self.scene.play(
+            *[icon.animate.scale(1 / 1.2) for icon in icons],
+            text.animate.scale(1 / 1.05),
+            run_time=0.3,
+            rate_func=rate_functions.ease_in_back,
+        )
+
+        for icon in icons:
+            self._safe_set_glow(icon, 0.6)
+
+        self.scene.play(
+            *[icon.animate.scale(1.05) for icon in icons],
+            run_time=0.8,
+            rate_func=there_and_back,
+        )
+
+        for icon in icons:
+            self._safe_set_glow(icon, 0.3)
+
+        self.scene.wait(1)

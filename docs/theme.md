@@ -1,6 +1,6 @@
 # Module: `manim_singularity.theme`
 
-`theme` 模块提供了奇点 IP 的核心视觉资产，包含全局色彩规范（`NeonTheme`）、预设片头转场引擎（`SingularityIP`）以及标准化的科幻网格场景基类（`EllipseBase`）。
+`theme` 模块提供了奇点 IP 的核心视觉资产，包含全局色彩规范（`NeonTheme`）、预设片头转场引擎（`SingularityIP`）、标准化的科幻网格场景基类（`EllipseBase`）以及 B站风格片尾一键三连卡片（`EndingCard`）。
 
 ---
 
@@ -18,6 +18,10 @@
 | `COLOR_GRID` | `str` | `"#1A2639"` | 暗蓝色，专用于底层坐标网格，低对比度以防喧宾夺主。 |
 | `COLOR_TITLE` | `tuple`| `("#00E5FF", "#0077FF")` | 标准标题渐变色（青至蓝的过渡）。 |
 | `TEXT` | `str` | `"#E6E6E6"` | 标准正文颜色（高亮灰），相较纯白在深色背景下更护眼。 |
+| `BILI_LIKE` | `str` | `"#FB7299"` | B站标准点赞粉色。 |
+| `BILI_COIN` | `str` | `"#F5A623"` | B站标准投币金色。 |
+| `BILI_FAVO` | `str` | `"#FFC107"` | B站标准收藏黄色。 |
+| `ENDING_FALLBACK` | `tuple` | `("#FF69B4", "#FF69B4", "#FF69B4")` | 非B站模式片尾配色（粉红 / PINK）。 |
 
 ### 使用示例
 
@@ -134,3 +138,50 @@ class GridExample(EllipseBase):
         # 5. 后续处理（例：放大曲线）
         self.play(parabola.animate.scale(1.5))
 ```
+
+---
+
+## 4. `EndingCard` 类
+
+**描述**：B站风格"一键三连"片尾卡片动画组件。支持三种场景变换模式、B站波浪点亮及呼吸心跳收尾。
+
+### `__init__(self, scene, exclude_mobjects=None)`
+
+- **`scene`**: 当前 `Scene` 实例。
+- **`exclude_mobjects`** (`list`, 可选): 不希望被动画清理的物体列表（如水印、标题）。
+
+### `play_ending(self, mode="A", bilibili_style=True)`
+
+- **`mode`** (`"A"`|`"B"`|`"C"`, 默认 `"A"`):
+  - `A` — **汇聚重生**：所有物体吸入中心 → 闪光 → 图标弹性爆出。
+  - `B` — **形态变换**：按 x 坐标左/中/右三区，原地变形为对应图标。
+  - `C` — **按位分配**：x 排序后均分三组，每组聚合并变形。
+- **`bilibili_style`** (`bool`, 默认 `True`): 是否使用 B站风格波浪式点亮（依次弹跳 + 变色 + 发光）。
+
+### 使用示例
+
+```python
+from manim import Scene, Text, Circle, Dot, VGroup, RED, GREEN
+from manim_singularity import EndingCard
+
+class TestEnding(Scene):
+    def construct(self):
+        title = Text("演示场景").to_edge(UP)
+        self.add(title)
+
+        mobs = VGroup(
+            Circle(color=RED, fill_opacity=0.5).shift(UL * 3),
+            Dot(color=GREEN).shift(DR * 3),
+        )
+        self.play(FadeIn(mobs))
+        self.wait(1)
+
+        card = EndingCard(self, exclude_mobjects=[title])
+        card.play_ending(mode="A", bilibili_style=True)
+        self.wait(2)
+```
+
+### 设计说明
+
+- SVG 图标存放于 `manim_singularity/svg/`（`good.svg` / `coin.svg` / `favo.svg`），缺失时自动降级为白色圆形占位。
+- `_safe_set_glow` 对 Manim 版本做防御性兼容，不支持 `set_glow` 时静默跳过。
