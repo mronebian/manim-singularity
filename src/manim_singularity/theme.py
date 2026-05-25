@@ -3,30 +3,11 @@ import os
 from manim import *
 from typing import Optional
 
-
-# ==========================================
-# 1. 全局主题配置库
-# ==========================================
-class NeonTheme:
-    """奇点 IP 全局视觉主题配色"""
-
-    BG_COLOR = "#0D1117"  # 深太空蓝背景
-    COLOR_WHITE = "#FFFFFF"  # 纯白
-    COLOR_ELLIPSE = "#00E5FF"  # 赛博蓝（用于主轨道和强调色）
-    COLOR_GRID = "#1A2639"  # 暗蓝色（用于底层网格，防止喧宾夺主）
-    COLOR_TITLE = ("#00E5FF", "#0077FF")  # 标题默认渐变色（青到蓝）
-    TEXT = "#E6E6E6"  # 正文灰白色（比纯白更护眼）
-
-    # B站片尾三连配色
-    BILI_LIKE = "#FB7299"
-    BILI_COIN = "#F5A623"
-    BILI_FAVO = "#FFC107"
-    # 非B站模式片尾配色
-    ENDING_FALLBACK = ("#FF69B4", "#FF69B4", "#FF69B4")
+from .color import theme
 
 
 # ==========================================
-# 2. 奇点 IP 片头转场库
+# 1. 奇点 IP 片头转场库
 # ==========================================
 class SingularityIP:
     """
@@ -180,14 +161,14 @@ class EllipseBase:
         self.scene = scene
 
         # 自动设置背景色
-        self.scene.camera.background_color = NeonTheme.BG_COLOR
+        self.scene.camera.background_color = theme.BACKGROUND_COLOR
 
         # 创建网格
         self.grid = NumberPlane(
             x_range=[-10, 10, 1],
             y_range=[-6, 6, 1],
             background_line_style={
-                "stroke_color": NeonTheme.COLOR_WHITE,
+                "stroke_color": theme.WHITE_COLOR,
                 "stroke_width": 2.0,
                 "stroke_opacity": 0.6,
             },
@@ -208,7 +189,7 @@ class EllipseBase:
         )
         self.scene.play(
             axes.animate.set_stroke(
-                width=2, color=NeonTheme.COLOR_ELLIPSE, opacity=0.8
+                width=2, color=theme.PRIMARY_FILL_COLOR, opacity=0.8
             ),
             run_time=0.6,
         )
@@ -233,7 +214,7 @@ class EllipseBase:
                 l.set_stroke(color=WHITE, opacity=0.8, width=2.5)
                 grow = GrowFromCenter(l, run_time=0.4, rate_func=smooth)
                 fade = l.animate(run_time=0.5).set_stroke(
-                    color=NeonTheme.COLOR_GRID, opacity=0.7, width=1.5
+                    color=theme.GRID_LINE_COLOR, opacity=0.7, width=1.5
                 )
                 anims.append(Succession(grow, fade))
             return anims
@@ -271,9 +252,9 @@ class EllipseBase:
     def get_header(self, title_str: str, formula_str: str) -> VGroup:
         """快速生成统一风格的标题与公式头"""
         title = Text(title_str, weight=BOLD, font_size=40).set_color_by_gradient(
-            *NeonTheme.COLOR_TITLE
+            *theme.title_gradient()
         )
-        formula = MathTex(formula_str, color=NeonTheme.TEXT)
+        formula = MathTex(formula_str, color=theme.TEXT_COLOR)
         return VGroup(title, formula).arrange(DOWN, buff=0.4).move_to(ORIGIN)
 
     def c2p(self, *args, **kwargs):
@@ -289,7 +270,7 @@ class EllipseBase:
 class EndingCard:
     """奇点 IP 片尾一键三连卡片（点赞、投币、收藏）"""
 
-    _SVG_DIR = os.path.join(os.path.dirname(__file__), "..", "svg")
+    _SVG_DIR = os.path.join(os.path.dirname(__file__), "..", "assets", "svg")
 
     def __init__(self, scene: Scene, exclude_mobjects: list = None):
         self.scene = scene
@@ -352,7 +333,7 @@ class EndingCard:
 
     # ── 公共入口 ──────────────────────────────────
 
-    def play_ending(self, mode: str = "A", bilibili_style: bool = True):
+    def play_ending(self, mode: str = "A"):
         icons = self._build_icons()
         mode = mode.upper()
 
@@ -363,10 +344,8 @@ class EndingCard:
         elif mode == "C":
             self._mode_assign(icons)
 
-        if bilibili_style:
-            self._bilibili_activation(icons)
-
-        self._show_text_and_settle(icons, bilibili_style)
+        self._icon_activation(icons)
+        self._show_text_and_settle(icons)
 
     # ── Phase 1: 三种场景变换 ─────────────────────
 
@@ -466,16 +445,16 @@ class EndingCard:
         if animations:
             self.scene.play(*animations, run_time=1.2, rate_func=smooth)
 
-    # ── Phase 2: B 站风格点亮 ────────────────────
+    # ── Phase 2: 图标逐一点亮 ────────────────────
 
-    def _bilibili_activation(self, icons: VGroup):
-        colors = [NeonTheme.BILI_LIKE, NeonTheme.BILI_COIN, NeonTheme.BILI_FAVO]
+    def _icon_activation(self, icons: VGroup):
+        palette = [theme.PRIMARY_FILL_COLOR, theme.SUCCESS_COLOR, theme.ACCENT_FILL_COLOR]
 
-        for icon, color in zip(icons, colors):
+        for icon, clr in zip(icons, palette):
             self.scene.wait(0.08)
 
             self.scene.play(
-                icon.animate.set_fill(color, opacity=1).scale(1.35),
+                icon.animate.set_fill(clr, opacity=1).scale(1.35),
                 run_time=0.28,
                 rate_func=rate_functions.ease_out_elastic,
             )
@@ -497,7 +476,7 @@ class EndingCard:
 
     # ── Phase 3: 文字 + 心跳 ──────────────────────
 
-    def _show_text_and_settle(self, icons: VGroup, bilibili_style: bool):
+    def _show_text_and_settle(self, icons: VGroup):
         text = Text("一键三连", font_size=50, color=WHITE, weight=BOLD)
         text.next_to(icons, DOWN, buff=0.8)
 
@@ -511,18 +490,14 @@ class EndingCard:
         self.scene.play(Write(text), run_time=0.6)
         self.scene.play(Write(comment), run_time=0.5)
 
-        final_colors = (
-            [NeonTheme.BILI_LIKE, NeonTheme.BILI_COIN, NeonTheme.BILI_FAVO]
-            if bilibili_style
-            else list(NeonTheme.ENDING_FALLBACK)
-        )
+        palette = [theme.PRIMARY_FILL_COLOR, theme.SUCCESS_COLOR, theme.WHITE_COLOR]
 
         self.scene.play(
             *[
-                icon.animate.scale(1.2).set_fill(color, opacity=1)
-                for icon, color in zip(icons, final_colors)
+                icon.animate.scale(1.2).set_fill(clr, opacity=1)
+                for icon, clr in zip(icons, palette)
             ],
-            text.animate.scale(1.05).set_color(final_colors[0]),
+            text.animate.scale(1.05).set_color(palette[0]),
             run_time=0.3,
             rate_func=rate_functions.ease_out_back,
         )

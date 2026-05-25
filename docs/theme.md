@@ -37,6 +37,13 @@ text = Text("普通正文", color=NeonTheme.TEXT)
 ---
 
 ## 2. `SingularityIP` 类
+`theme` 模块提供了奇点 IP 的核心视觉资产，包含预设片头转场引擎（`SingularityIP`）以及标准化的科幻网格场景基类（`EllipseBase`）。
+
+**主题颜色系统已迁移至 `manim_singularity.color`（chroma_vault）**，统一通过模块级单例 `theme` 实例访问。详见 [`docs/color.md`](color.md)。
+
+---
+
+## 1. `SingularityIP` 类
 
 **描述**：厂牌级片头转场引擎。负责生成标准化的开场动画，并支持将核心图形动态平滑地转换为当前视频的正片标题。
 
@@ -61,26 +68,28 @@ text = Text("普通正文", color=NeonTheme.TEXT)
 
 ```python
 from manim import Scene, Text
-from manim_singularity import SingularityIP, NeonTheme
+from manim_singularity import SingularityIP, theme
 
 class IntroExample(Scene):
     def construct(self):
         ip = SingularityIP(self)
-        
+
         # 定义本集专属标题
-        chapter_title = Text("第一期：线性代数本质").set_color_by_gradient(*NeonTheme.COLOR_TITLE)
-        
+        chapter_title = Text("第一期：线性代数本质").set_color_by_gradient(
+            *theme.title_gradient()
+        )
+
         # 播放片头并自动变身飞出
         ip.play_intro(target_title=chapter_title)
 ```
 
 ---
 
-## 3. `EllipseBase` 类
+## 2. `EllipseBase` 类
 
 **描述**：标准科幻网格场景基类，继承自 Manim 的 `ThreeDScene`。任何需要绘制网格、函数的数学演示场景，均应直接继承此类而非基础 `Scene`。
 
-该基类在其生命周期的 `setup()` 阶段，会自动将背景设为 `NeonTheme.BG_COLOR`，并实例化一个标准坐标平面 `self.grid`。
+该基类在其生命周期的 `setup()` 阶段，会自动将背景设为 `theme.BG`，并实例化一个标准坐标平面 `self.grid`。
 
 ### 属性 (Attributes)
 
@@ -134,7 +143,7 @@ class GridExample(EllipseBase):
 
         # 4. 剥离网格，使曲线悬浮
         self.animate_grid_removal()
-        
+
         # 5. 后续处理（例：放大曲线）
         self.play(parabola.animate.scale(1.5))
 ```

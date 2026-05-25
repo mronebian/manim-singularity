@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "manim-singularity"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+    "manim>=0.18.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[project.scripts]
+chroma = "manim_singularity.color.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["manim_singularity*"]

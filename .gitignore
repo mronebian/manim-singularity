@@ -1,2 +1,21 @@
-.DS_Store
+# Byte-compiled
+__pycache__/
 *.pyc
+
+# Build artifacts
+*.egg-info/
+dist/
+build/
+
+# Virtual environment
+.venv/
+
+# OS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Project notes
+Todolist/
