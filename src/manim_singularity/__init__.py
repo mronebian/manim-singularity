@@ -1,5 +1,6 @@
-"""
-manim_singularity — 奇点 IP 视觉资产包。
+"""manim_singularity — 奇点 IP 视觉资产包。
+
+manim_singularity — Singularity IP visual asset package.
 
 设计策略（LSP 兼容 + CLI 零 manim）：
   - ColorDB / ColorRecord / color 子包：静态导入，零 manim 依赖
@@ -40,8 +41,20 @@ from . import color
 from .color import ColorDB, ColorRecord
 
 
-# ── 需 manim 的懒加载 ──
-def __getattr__(name):
+def __getattr__(name: str):
+    """懒加载代理：按需导入子模块，避免 manim 依赖污染。
+
+    Lazy loading proxy: import submodules on demand to keep CLI zero-manim.
+
+    Args:
+        name: 导出的属性名。
+
+    Returns:
+        请求的子模块或类实例。
+
+    Raises:
+        AttributeError: 未知的导出名。
+    """
     if name == "VoiceOver":
         from .voiceover import VoiceOver
         return VoiceOver

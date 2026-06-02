@@ -1,9 +1,23 @@
+"""字幕系统。
+
+Subtitle system.
+
+全参数化字幕引擎，支持自定义字体、颜色、渐变、入场/退场动画。
+"""
 from typing import Any, Callable, Optional, Tuple
 
 from manim import BOLD, DOWN, FadeOut, Scene, Text, Write
 
 
 class SubtitleSystem:
+    """字幕系统。
+
+    Subtitle system.
+
+    通过 VoiceOver 的 subtitle_kwargs 参数传入自定义配置。
+    支持渐变、逐字着色、自定义入场/退场动画等。
+    """
+
     def __init__(
         self,
         scene: Scene,
@@ -24,6 +38,28 @@ class SubtitleSystem:
         line_spacing: float = 1.2,
         add_fixed_in_frame: bool = True,
     ) -> None:
+        """初始化字幕系统。
+
+        Initialize the subtitle system.
+
+        Args:
+            scene: 当前 Manim Scene 实例。
+            font_size: 字号。
+            font: 字体名称。
+            color: 单色（与 gradient 互斥）。
+            t2c: 逐字着色字典。
+            gradient: 渐变色元组（与 color 互斥）。
+            position: 字幕位置。
+            buff: 边距。
+            entrance_animation: 入场动画类型。
+            entrance_run_time: 入场动画时长。None 时自动计算为 min(0.6, duration*0.3)。
+            exit_animation: 离场动画类型。
+            exit_run_time: 离场动画时长。
+            exit_shift: 离场位移方向。
+            weight: 字重。
+            line_spacing: 行距。
+            add_fixed_in_frame: 是否添加到固定帧（3D 场景中保持在屏幕平面）。
+        """
         self.scene = scene
         self.font_size = font_size
         self.font = font
@@ -42,6 +78,16 @@ class SubtitleSystem:
         self.add_fixed_in_frame = add_fixed_in_frame
 
     def create_subtitle(self, text: str) -> Text:
+        """创建字幕 Text 对象。
+
+        Create a subtitle Text object.
+
+        Args:
+            text: 字幕文本。
+
+        Returns:
+            已着色并定位的 Text 对象。
+        """
         kwargs = {
             "font_size": self.font_size,
             "line_spacing": self.line_spacing,
@@ -63,6 +109,17 @@ class SubtitleSystem:
         return mob
 
     def play_entrance(self, subtitle: Text, duration: float) -> float:
+        """播放字幕入场动画。
+
+        Play the subtitle entrance animation.
+
+        Args:
+            subtitle: 字幕 Text 对象。
+            duration: 语音总时长（秒），用于自动计算入场时长。
+
+        Returns:
+            入场动画实际时长（秒）。
+        """
         if self.entrance_run_time is not None:
             run_time = self.entrance_run_time
         else:
@@ -71,6 +128,16 @@ class SubtitleSystem:
         return run_time
 
     def play_exit(self, subtitle: Text) -> float:
+        """播放字幕退场动画。
+
+        Play the subtitle exit animation.
+
+        Args:
+            subtitle: 字幕 Text 对象。
+
+        Returns:
+            退场动画时长（秒）。
+        """
         self.scene.play(
             self.exit_animation(subtitle, shift=self.exit_shift),
             run_time=self.exit_run_time,
@@ -78,9 +145,25 @@ class SubtitleSystem:
         return self.exit_run_time
 
     def add_to_scene(self, mob: Text) -> None:
+        """将字幕对象添加到场景。
+
+        Add a subtitle mobject to the scene.
+
+        根据 add_fixed_in_frame 决定是否添加到固定帧。
+
+        Args:
+            mob: 字幕 Text 对象。
+        """
         if self.add_fixed_in_frame and hasattr(self.scene, "add_fixed_in_frame_mobjects"):
             self.scene.add_fixed_in_frame_mobjects(mob)
 
     def remove_from_scene(self, mob: Text) -> None:
+        """从场景移除字幕对象。
+
+        Remove a subtitle mobject from the scene.
+
+        Args:
+            mob: 字幕 Text 对象。
+        """
         if self.add_fixed_in_frame and hasattr(self.scene, "remove_fixed_in_frame_mobjects"):
             self.scene.remove_fixed_in_frame_mobjects(mob)

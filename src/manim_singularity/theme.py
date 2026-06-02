@@ -10,12 +10,22 @@ from .color import theme
 # 1. 奇点 IP 片头转场库
 # ==========================================
 class SingularityIP:
-    """
-    奇点 IP 动画资产管理库。
-    【自然丝滑 + 蓄力飞出版】
+    """奇点 IP 片头转场引擎。
+
+    Singularity IP intro animation engine.
+
+    播放标准化的开场动画（轨道展开 → 核心绽放 → 变形离场）。
+    支持将核心图形动态变形成正片标题并蓄力飞出。
     """
 
-    def __init__(self, scene: Scene):
+    def __init__(self, scene: Scene) -> None:
+        """初始化片头引擎。
+
+        Initialize the intro engine.
+
+        Args:
+            scene: 当前 Manim Scene 实例，动画直接作用于该场景。
+        """
         self.scene = scene
 
     def play_intro(
@@ -24,14 +34,27 @@ class SingularityIP:
         *,
         keep_final: bool = False,
     ) -> Optional[Mobject]:
+        """播放完整片头动画序列。
+
+        Play the full intro animation sequence.
+
+        动画流程：三轨道展开 → 无穷符号绽放 → 细节元素浮现 → 变形/离场。
+        若传入 target_title，片头几何体将在尾声变形成目标标题，
+        执行"下沉蓄力 → 向上飞出"的转场特效。
+
+        Args:
+            target_title: 目标标题对象。传入后片头几何体将变形为该标题。
+            keep_final: 仅在 target_title 为 None 时生效。
+                True 保留 Logo 在画面中央，False 自动飞出。
+
+        Returns:
+            最终留在画面上的 Mobject，可用于后续动画接力。
+        """
         # ---------- 1. 轨道起手 ----------
-        orbit1 = Ellipse(width=3.5, height=1.2, color="#79C0FF", stroke_width=2)
-        orbit2 = Ellipse(width=3.5, height=1.2, color="#79C0FF", stroke_width=2).rotate(
-            PI / 3
-        )
-        orbit3 = Ellipse(width=3.5, height=1.2, color="#79C0FF", stroke_width=2).rotate(
-            -PI / 3
-        )
+        orbit_color = theme.ORBIT_STROKE_COLOR
+        orbit1 = Ellipse(width=3.5, height=1.2, color=orbit_color, stroke_width=2)
+        orbit2 = Ellipse(width=3.5, height=1.2, color=orbit_color, stroke_width=2).rotate(PI / 3)
+        orbit3 = Ellipse(width=3.5, height=1.2, color=orbit_color, stroke_width=2).rotate(-PI / 3)
 
         self.scene.play(
             Create(orbit1),
@@ -43,31 +66,31 @@ class SingularityIP:
         self.scene.wait(0.1)
 
         # ---------- 2. 核心绽放 ----------
-        infinity = MathTex(r"\infty", font_size=120, color="#9B6FBD")
+        infinity = MathTex(r"\infty", font_size=120, color=theme.INFINITY_COLOR)
         infinity.set_sheen(-0.3, DOWN).set_z_index(4).scale(0.1)
 
-        outer_ring = Circle(radius=2.2, color="#58A6FF", stroke_width=4)
-        inner_ring = Circle(radius=2.0, color="#58A6FF", stroke_width=1.5)
+        outer_ring = Circle(radius=2.2, color=theme.RING_STROKE_COLOR, stroke_width=4)
+        inner_ring = Circle(radius=2.0, color=theme.RING_STROKE_COLOR, stroke_width=1.5)
 
         name_text = Text("奇  点", font_size=38, color="#C39BD3").set_color_by_gradient(
             "#FFFFFF", "#C39BD3", "#9B59B6"
         )
         name_text.next_to(outer_ring, DOWN, buff=0.3)
 
-        tagline = Text("Infinity", font_size=16, color="#7D3C98").next_to(
+        tagline = Text("Infinity", font_size=16, color=theme.TAGLINE_COLOR).next_to(
             name_text, DOWN, buff=0.15
         )
 
         line_l = Line(
-            LEFT * 0.9, LEFT * 0.15, stroke_width=1.2, color="#6C3483"
+            LEFT * 0.9, LEFT * 0.15, stroke_width=1.2, color=theme.DECORATIVE_LINE_COLOR
         ).next_to(tagline, LEFT, buff=0.12)
         line_r = Line(
-            RIGHT * 0.15, RIGHT * 0.9, stroke_width=1.2, color="#6C3483"
+            RIGHT * 0.15, RIGHT * 0.9, stroke_width=1.2, color=theme.DECORATIVE_LINE_COLOR
         ).next_to(tagline, RIGHT, buff=0.12)
 
         self.scene.play(
             infinity.animate.scale(10),
-            Flash(ORIGIN, color="#9B6FBD", line_length=0.6, num_lines=12),
+            Flash(ORIGIN, color=theme.INFINITY_COLOR, line_length=0.6, num_lines=12),
             Create(VGroup(outer_ring, inner_ring)),
             FadeIn(name_text, shift=UP * 0.2),
             FadeIn(tagline, shift=UP * 0.2),
@@ -150,18 +173,38 @@ class SingularityIP:
 # 3. 几何网格场景基类
 # ==========================================
 class EllipseBase:
-    """
-    科幻网格场景工具类。
-    提供网格创建、展开/消除动画、标题生成等功能。
-    使用方式：el = EllipseBase(self)，然后调用 el.xxx()
+    """科幻网格场景工具类。
+
+    Sci-fi grid scene utility class.
+
+    提供网格创建、波浪展开、内爆消除等动画，
+    以及标题/公式快速生成功能。
+    内部自动使用 color 颜色库设置主题背景色。
+
+    使用方式：
+        el = EllipseBase(self)
+        el.animate_grid_growth()
+
+    Attributes:
+        scene: 绑定的 Manim Scene 实例。
+        grid: 自动创建的 NumberPlane 网格对象。
     """
 
-    def __init__(self, scene: Scene):
-        """保存场景引用，创建网格"""
+    def __init__(self, scene: Scene) -> None:
+        """初始化网格场景。
+
+        Initialize the grid scene.
+
+        自动设置背景色为 theme.SCENE_BACKGROUND_COLOR，
+        创建一个标准 NumberPlane 网格。
+
+        Args:
+            scene: 当前 Manim Scene 实例。
+        """
         self.scene = scene
 
         # 自动设置背景色
-        self.scene.camera.background_color = theme.BACKGROUND_COLOR
+        self.scene.camera.background_color = theme.SCENE_BACKGROUND_COLOR
 
         # 创建网格
         self.grid = NumberPlane(
@@ -174,8 +217,19 @@ class EllipseBase:
             },
         )
 
-    def animate_grid_growth(self):
-        """播放网格波浪式展开动画"""
+    def animate_grid_growth(self) -> None:
+        """播放网格波浪式展开动画。
+
+        Play the wave-style grid expansion animation.
+
+        动画流程：
+          1. 坐标轴从中心爆发渐显（1.0s）
+          2. 坐标轴变为主题色（0.6s）
+          3. 网格线逐条从中心波浪式扫描展开（3.0s）
+          4. 全屏白色冲击波闪烁（0.5s）
+
+        总时长约 5.6 秒。
+        """
 
         # --- 步骤 1：坐标轴强化爆发 ---
         axes = self.grid.axes
@@ -236,8 +290,18 @@ class EllipseBase:
         self.scene.add(self.grid)
         self.scene.wait(0.5)
 
-    def animate_grid_removal(self):
-        """播放网格科幻内爆消除动画"""
+    def animate_grid_removal(self) -> None:
+        """播放网格内爆消除动画。
+
+        Play the implosion-style grid removal animation.
+
+        动画流程：
+          1. 背景辅助线黯然淡出（0.8s）
+          2. 坐标轴向中心极速收缩（0.6s）
+          3. 从场景彻底移除网格实体
+
+        总时长约 1.6 秒。
+        """
 
         # 1. 让背景辅助线黯淡并消失
         self.scene.play(FadeOut(self.grid.background_lines), run_time=0.8)
@@ -250,15 +314,40 @@ class EllipseBase:
         self.scene.wait(0.2)
 
     def get_header(self, title_str: str, formula_str: str) -> VGroup:
-        """快速生成统一风格的标题与公式头"""
+        """生成顶部标题与公式的组合。
+
+        Generate a header with title and formula.
+
+        自动着色：标题使用 color.title_gradient() 渐变色，
+         公式使用 theme.BODY_TEXT_COLOR。
+
+        Args:
+            title_str: 标题文本。
+            formula_str: LaTeX 公式字符串。
+
+        Returns:
+            自动居中的 (标题 + 公式) 垂直组合。
+        """
         title = Text(title_str, weight=BOLD, font_size=40).set_color_by_gradient(
             *theme.title_gradient()
         )
-        formula = MathTex(formula_str, color=theme.TEXT_COLOR)
+        formula = MathTex(formula_str, color=theme.BODY_TEXT_COLOR)
         return VGroup(title, formula).arrange(DOWN, buff=0.4).move_to(ORIGIN)
 
-    def c2p(self, *args, **kwargs):
-        """代理方法：将坐标转换为场景坐标"""
+    def c2p(self, *args, **kwargs) -> np.ndarray:
+        """将逻辑坐标转换为场景像素坐标。
+
+        Convert logical coordinates to scene pixel coordinates.
+
+        代理到 self.grid.c2p，方便在场景中定位。
+
+        Args:
+            *args: 坐标参数，同 NumberPlane.c2p。
+            **kwargs: 关键字参数，同 NumberPlane.c2p。
+
+        Returns:
+            场景中的像素坐标数组。
+        """
         return self.grid.c2p(*args, **kwargs)
 
 
@@ -268,11 +357,30 @@ class EllipseBase:
 
 
 class EndingCard:
-    """奇点 IP 片尾一键三连卡片（点赞、投币、收藏）"""
+    """奇点 IP 片尾三连卡片。
 
-    _SVG_DIR = os.path.join(os.path.dirname(__file__), "..", "assets", "svg")
+    Singularity IP ending card with three icons.
 
-    def __init__(self, scene: Scene, exclude_mobjects: list = None):
+    提供三种场景变换模式（汇聚/变形/分配），
+    图标逐一点亮动画，以及文字心跳效果。
+    支持 SVG 图标和纯几何回退。
+
+    使用方式：
+        card = EndingCard(self)
+        card.play_ending(mode="A")
+    """
+
+    _SVG_DIR: str = os.path.join(os.path.dirname(__file__), "..", "assets", "svg")
+
+    def __init__(self, scene: Scene, exclude_mobjects: Optional[list] = None) -> None:
+        """初始化片尾卡片。
+
+        Initialize the ending card.
+
+        Args:
+            scene: 当前 Manim Scene 实例。
+            exclude_mobjects: 需要排除在变换之外的 mobject 列表。
+        """
         self.scene = scene
         self.exclude_mobjects = exclude_mobjects if exclude_mobjects is not None else []
         self.left_threshold = -2.5
@@ -333,7 +441,16 @@ class EndingCard:
 
     # ── 公共入口 ──────────────────────────────────
 
-    def play_ending(self, mode: str = "A"):
+    def play_ending(self, mode: str = "A") -> None:
+        """播放完整的片尾动画。
+
+        Play the full ending animation.
+
+        动画流程：场景变换（Phase 1）→ 图标点亮（Phase 2）→ 文字心跳（Phase 3）。
+
+        Args:
+            mode: 场景变换模式，可选 "A"（汇聚）、"B"（变形）、"C"（分配）。
+        """
         icons = self._build_icons()
         mode = mode.upper()
 

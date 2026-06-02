@@ -19,3 +19,6 @@ build/
 
 # Project notes
 Todolist/
+
+# Runtime data
+assets/colors.db

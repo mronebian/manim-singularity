@@ -1,3 +1,9 @@
+"""VoiceOver 主接口类。
+
+Main VoiceOver interface class.
+
+提供 TTS 语音旁白、背景音乐、音效和字幕的统一入口。
+"""
 from typing import Any, Dict, Optional
 
 from manim import Scene
@@ -11,6 +17,17 @@ from .subtitles import SubtitleSystem
 
 
 class VoiceOver:
+    """语音旁白主接口。
+
+    VoiceOver main interface.
+
+    整合 TTS 生成、音频提交、字幕显示和背景音乐控制。
+    使用方式：在 Scene.construct 中实例化后调用 say_blocking / context / play_with_audio。
+
+    Attributes:
+        bgm: BGMController 实例，用于控制背景音乐。
+    """
+
     def __init__(
         self,
         scene: Scene,
@@ -18,6 +35,16 @@ class VoiceOver:
         show_subtitles: bool = True,
         subtitle_kwargs: Optional[Dict[str, Any]] = None,
     ) -> None:
+        """初始化 VoiceOver。
+
+        Initialize VoiceOver.
+
+        Args:
+            scene: 当前 Manim Scene 实例。
+            default_voice: 默认 Edge-TTS 音色。
+            show_subtitles: 是否显示字幕。
+            subtitle_kwargs: 传递给 SubtitleSystem 的参数字典。
+        """
         self.scene = scene
         self.default_voice = default_voice
         self.show_subtitles = show_subtitles
@@ -36,6 +63,21 @@ class VoiceOver:
         offset: float = 0.0,
         tts_text: Optional[str] = None,
     ) -> float:
+        """阻塞式语音旁白。
+
+        Blocking voiceover narration.
+
+        播放音频和字幕，读完后才继续执行。
+
+        Args:
+            text: 字幕显示的文本。
+            voice: 临时覆盖默认音色，为 None 时使用 default_voice。
+            offset: 播放前延迟（秒）。
+            tts_text: 实际朗读文本。为 None 时朗读 text。
+
+        Returns:
+            音频时长（秒）。
+        """
         with self.context(text, voice=voice, offset=offset, tts_text=tts_text) as audio:
             pass
         return audio["duration"]
@@ -47,6 +89,23 @@ class VoiceOver:
         offset: float = 0.0,
         tts_text: Optional[str] = None,
     ) -> AudioContext:
+        """返回音画同步上下文管理器。
+
+        Return an audio-visual sync context manager.
+
+        在 with 块内播放音频和字幕，自动补齐时长。
+        动画时长 < 语音时长 → 等待补齐。
+        动画时长 > 语音时长 → 不截断，正常执行。
+
+        Args:
+            text: 字幕显示的文本。
+            voice: 临时覆盖音色。
+            offset: 播放前延迟（秒）。
+            tts_text: 实际朗读文本。
+
+        Returns:
+            AudioContext 上下文管理器。
+        """
         target_voice = voice or self.default_voice
         data = self.manager.get_audio_data_sync(text, target_voice, tts_text=tts_text)
 
@@ -68,11 +127,34 @@ class VoiceOver:
         tts_text: Optional[str] = None,
         **kwargs: Any,
     ) -> None:
+        """播放动画并将 run_time 锁定为语音时长。
+
+        Play animations with run_time locked to audio duration.
+
+        Args:
+            *animations: 要播放的动画。
+            text: 字幕文本。
+            voice: 临时覆盖音色。
+            tts_text: 实际朗读文本。
+            **kwargs: 传递给 scene.play 的额外参数。
+        """
         with self.context(text, voice=voice, tts_text=tts_text) as audio:
             kwargs.setdefault("run_time", audio["duration"])
             self.scene.play(*animations, **kwargs)
 
     def sfx(self, path: str, volume: float = 1.0, time_offset: float = 0.0) -> SFXContext:
+        """创建音效上下文管理器。
+
+        Create a sound effect context manager.
+
+        Args:
+            path: 音效文件路径（非 WAV 自动转码）。
+            volume: 音量倍数，1.0 为原始音量。
+            time_offset: 播放延迟（秒）。
+
+        Returns:
+            SFXContext 上下文管理器。
+        """
         wav = ensure_wav(path)
         if volume != 1.0:
             wav = apply_volume(wav, volume)

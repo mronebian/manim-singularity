@@ -2,7 +2,7 @@
 
 颜色数据库系统，用于持续收藏颜色并灵活组合成不同视觉主题。
 
-**设计理念**：颜色只有一个来源——SQLite 数据库。无内置 seed/fallback，数据库由你手动管理。参考 seed 文件：`<项目根>/../chroma_seed.py`
+**设计理念**：颜色只有一个来源——SQLite 数据库。无内置 seed/fallback，数据库由你手动管理。使用 `chroma init` 创建数据库后通过 CLI 操作。
 
 **零依赖**：`ColorDB` 和 `ColorRecord` 仅用 Python 标准库，`chroma` CLI 和 `color` 颜色库不需要安装 manim。
 
@@ -77,7 +77,7 @@ from manim_singularity import color
 
 circle.set_color(color.PRIMARY_FILL_COLOR)
 title.set_color_by_gradient(*color.title_gradient())
-body.set_color(color.TEXT_COLOR)
+body.set_color(color.BODY_TEXT_COLOR)
 ```
 
 ---
@@ -86,34 +86,39 @@ body.set_color(color.TEXT_COLOR)
 
 ### 场景色
 
-| 属性 | 默认色值 | 用途 |
-|------|---------|------|
-| `color.BACKGROUND_COLOR` | `#0D1117` | 场景背景色 |
-| `color.SURFACE_COLOR` | `#161B22` | 卡片/面板底色 |
+| 属性 | 默认色值 | 用途 | 对应 Manim 对象 |
+|------|---------|------|----------------|
+| `color.SCENE_BACKGROUND_COLOR` | `#0D1117` | 场景背景色 | `camera.background_color` |
+| `color.SCENE_FLASH_COLOR` | `#FFFFFF` | Flash 闪烁色 | `Flash(color=...)` |
 
 ### 网格色
 
-| 属性 | 默认色值 | 用途 |
-|------|---------|------|
-| `color.GRID_LINE_COLOR` | `#1A2639` | 网格线色 |
-| `color.GRID_AXIS_COLOR` | `#FFFFFF` | 坐标轴线色 |
+| 属性 | 默认色值 | 用途 | 对应 Manim 对象 |
+|------|---------|------|----------------|
+| `color.GRID_LINE_COLOR` | `#1A2639` | 网格线色 | `NumberPlane` 背景线 |
+| `color.GRID_AXIS_COLOR` | `#FFFFFF` | 坐标轴线色 | `Axes` 坐标轴 |
 
 ### 图形填充色
 
-| 属性 | 默认色值 | 用途 |
-|------|---------|------|
-| `color.PRIMARY_FILL_COLOR` | `#00E5FF` | 主要图形填充色 |
-| `color.SECONDARY_FILL_COLOR` | `#006680` | 次要图形填充色 |
-| `color.ACCENT_FILL_COLOR` | `#FFD700` | 点缀/高亮填充色 |
+| 属性 | 默认色值 | 用途 | 对应 Manim 对象 |
+|------|---------|------|----------------|
+| `color.PRIMARY_FILL_COLOR` | `#00E5FF` | 主要图形填充 | 坐标轴、图标点色 |
+| `color.ACCENT_FILL_COLOR` | `#FFD700` | 高亮填充色 | 图标动画 |
+| `color.ORBIT_STROKE_COLOR` | `#79C0FF` | 轨道描边色 | `Ellipse` 轨道圈 |
+| `color.RING_STROKE_COLOR` | `#58A6FF` | 光环描边色 | `Circle` 光环 |
+| `color.ICON_FILL_COLOR` | `#FFFFFF` | 图标填充色 | `SVGMobject` |
 
 ### 文字色
 
-| 属性 | 默认色值 | 用途 |
-|------|---------|------|
-| `color.TITLE_COLOR` | `#00E5FF` | 标题文字色 |
-| `color.TITLE_GRADIENT_END_COLOR` | `#0077FF` | 标题渐变末端色 |
-| `color.TEXT_COLOR` | `#E6E6E6` | 正文文字色 |
-| `color.TEXT_MUTED_COLOR` | `#8B949E` | 弱化文字色 |
+| 属性 | 默认色值 | 用途 | 对应 Manim 对象 |
+|------|---------|------|----------------|
+| `color.TITLE_COLOR` | `#00E5FF` | 标题文字色 + 渐变起点 | `Text` 标题 |
+| `color.TITLE_GRADIENT_END_COLOR` | `#0077FF` | 标题渐变终点 | `.set_color_by_gradient` |
+| `color.INFINITY_COLOR` | `#9B6FBD` | 无穷符号色 / Flash | `MathTex(\infty)` |
+| `color.TAGLINE_COLOR` | `#7D3C98` | 标语/副标题色 | 标语 `Text` |
+| `color.DECORATIVE_LINE_COLOR` | `#6C3483` | 装饰线色 | `Line` 装饰线 |
+| `color.BODY_TEXT_COLOR` | `#E6E6E6` | 正文/公式色 | `MathTex`、正文 |
+| `color.MUTED_TEXT_COLOR` | `#8B949E` | 弱化文字色 | 评论、备注 |
 
 ### 语义色
 
@@ -141,21 +146,62 @@ color.reload()           # → 清空缓存重新加载
 ### 使用示例
 
 ```python
-from manim import Text, Circle, Rectangle
+from manim import Scene, Text, Circle, MathTex, NumberPlane, Flash
 from manim_singularity import color
 
-scene.camera.background_color = color.BACKGROUND_COLOR
+# 场景
+scene.camera.background_color = color.SCENE_BACKGROUND_COLOR
 
-circle = Circle(color=color.PRIMARY_FILL_COLOR)
+# 网格
 grid = NumberPlane(background_line_style={"stroke_color": color.GRID_LINE_COLOR})
 
-title = Text("标题").set_color_by_gradient(*color.title_gradient())
-body = Text("正文", color=color.TEXT_COLOR)
-muted = Text("备注", color=color.TEXT_MUTED_COLOR)
+# 图形
+circle = Circle(color=color.PRIMARY_FILL_COLOR)
+orbit = Ellipse(color=color.ORBIT_STROKE_COLOR)
+ring = Circle(color=color.RING_STROKE_COLOR)
+icon = SVGMobject("path.svg").set_fill(color.ICON_FILL_COLOR)
 
+# 文字
+title = Text("标题").set_color_by_gradient(*color.title_gradient())
+infinity = MathTex(r"\infty", color=color.INFINITY_COLOR)
+tagline = Text("Infinity", color=color.TAGLINE_COLOR)
+body = Text("正文", color=color.BODY_TEXT_COLOR)
+muted = Text("备注", color=color.MUTED_TEXT_COLOR)
+
+# 语义
 success = Text("成功", color=color.SUCCESS_COLOR)
 danger = Text("错误", color=color.DANGER_COLOR)
+
+# 特效
+Flash(ORIGIN, color=color.SCENE_FLASH_COLOR)
 ```
+
+### 角色与 Manim 对象对照
+
+| 角色名（DB） | 属性 | 作用对象 |
+|-------------|------|---------|
+| `scene_background` | `SCENE_BACKGROUND_COLOR` | `Scene.camera.background_color` |
+| `scene_flash` | `SCENE_FLASH_COLOR` | `Flash` |
+| `grid_line` | `GRID_LINE_COLOR` | `NumberPlane` 背景线 |
+| `grid_axis` | `GRID_AXIS_COLOR` | `Axes` 坐标轴 |
+| `primary_fill` | `PRIMARY_FILL_COLOR` | 圆、坐标轴 final、图标点亮 |
+| `accent_fill` | `ACCENT_FILL_COLOR` | 图标高亮点亮 |
+| `orbit_stroke` | `ORBIT_STROKE_COLOR` | `Ellipse` 轨道 |
+| `ring_stroke` | `RING_STROKE_COLOR` | `Circle` 光环 |
+| `icon_fill` | `ICON_FILL_COLOR` | `SVGMobject` 图标填充 |
+| `title` | `TITLE_COLOR` | `Text` 标题 |
+| `title_gradient_end` | `TITLE_GRADIENT_END_COLOR` | `set_color_by_gradient` 终点 |
+| `infinity` | `INFINITY_COLOR` | `MathTex(\infty)` + `Flash` |
+| `tagline` | `TAGLINE_COLOR` | 标语 `Text` |
+| `decorative_line` | `DECORATIVE_LINE_COLOR` | `Line` 装饰线 |
+| `body_text` | `BODY_TEXT_COLOR` | `MathTex` 公式、正文 |
+| `muted_text` | `MUTED_TEXT_COLOR` | 弱化文字 |
+| `success` | `SUCCESS_COLOR` | 正向语义 |
+| `danger` | `DANGER_COLOR` | 危险语义 |
+| `warning` | `WARNING_COLOR` | 警告语义 |
+| `information` | `INFORMATION_COLOR` | 信息语义 |
+| `white` | `WHITE_COLOR` | 基础白 |
+| `black` | `BLACK_COLOR` | 基础黑 |
 
 ---
 
@@ -244,9 +290,9 @@ from manim_singularity import ColorDB, Theme
 
 theme = Theme(db, "赛博蓝夜")
 
-theme.BACKGROUND_COLOR         # ManimColor
-theme.PRIMARY_FILL_COLOR
-theme.TEXT_COLOR
+theme.SCENE_BACKGROUND_COLOR         # ManimColor
+
+theme.BODY_TEXT_COLOR
 theme.SUCCESS_COLOR
 
 # 全部角色
@@ -260,6 +306,25 @@ theme.all()  # → {role: ManimColor}
 ## 5. CLI 命令行
 
 **入口**：`chroma`（需 `pip install -e .` 注册）。零 manim 依赖。
+
+### 初始化
+
+```bash
+chroma init                          # 创建默认数据库 assets/colors.db
+chroma init --db-path ./my.db        # 创建自定义路径
+```
+
+### 自定义数据库路径
+
+所有命令都支持 `--db-path` 参数，或设置 `CHROMA_VAULT_DB_PATH` 环境变量：
+
+```bash
+chroma --db-path ./my.db add background "#0D1117"
+chroma --db-path ./my.db list
+
+export CHROMA_VAULT_DB_PATH=./my.db
+chroma add primary_fill "#00E5FF"
+```
 
 ### 颜色操作
 
@@ -285,12 +350,6 @@ chroma delete my_red               # 删除颜色
 chroma delete-theme "Neon"          # 删除主题
 ```
 
-### 一键初始化
-
-```bash
-python3 chroma_seed.py    # 17 色 + Neon 主题一次性就绪
-```
-
 ---
 
 ## 6. 标签系统
@@ -307,23 +366,17 @@ StandardTags.all()        # → 全部标准标签
 
 ## 7. 首次设置指南
 
-### 方式 A：一键初始化（推荐）
+### 方式 A：分步操作
 
 ```bash
-python3 chroma_seed.py
-```
+# 1. 创建数据库
+chroma init
 
-自动完成：17 色写入 → 创建 "Neon" 主题 → 绑定所有角色。
-
-### 方式 B：分步操作
-
-```bash
-# 1. 添加颜色
+# 2. 添加颜色
 chroma add background "#0D1117"
 chroma add primary_fill "#00E5FF"
-# ... 参考 chroma_seed.py
 
-# 2. 创建主题并绑定角色
+# 3. 创建主题并绑定角色
 chroma create-theme "Neon"
 chroma set-role "Neon" background background
 chroma set-role "Neon" primary_fill primary_fill
@@ -343,11 +396,11 @@ print(color.PRIMARY_FILL_COLOR)   # → #00E5FF
 
 | 旧 `NeonTheme.X` | 新 `color.X` |
 |---|---|
-| `BG_COLOR` | `BACKGROUND_COLOR` |
+| `BG_COLOR` | `SCENE_BACKGROUND_COLOR` |
 | `COLOR_WHITE` | `WHITE_COLOR` |
 | `COLOR_ELLIPSE` | `PRIMARY_FILL_COLOR` |
 | `COLOR_GRID` | `GRID_LINE_COLOR` |
-| `TEXT` | `TEXT_COLOR` |
+| `TEXT` | `BODY_TEXT_COLOR` |
 | `*COLOR_TITLE` | `*title_gradient()` |
 
 ---

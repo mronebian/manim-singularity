@@ -1,45 +1,8 @@
 # Module: `manim_singularity.theme`
 
-`theme` 模块提供了奇点 IP 的核心视觉资产，包含全局色彩规范（`NeonTheme`）、预设片头转场引擎（`SingularityIP`）、标准化的科幻网格场景基类（`EllipseBase`）以及 B站风格片尾一键三连卡片（`EndingCard`）。
+`theme` 模块提供了奇点 IP 的核心视觉资产，包含预设片头转场引擎（`SingularityIP`）、标准化的科幻网格场景基类（`EllipseBase`）以及片尾三连卡片（`EndingCard`）。
 
----
-
-## 1. `NeonTheme` 类
-
-**描述**：全局视觉主题配置类。提供了一致的色彩常量，用于保证视频视觉风格的统一。所有颜色均为 Hex 字符串或其元组。
-
-### 属性 (Attributes)
-
-| 属性名称 | 类型 | 色值示例 | 描述 |
-| :--- | :--- | :--- | :--- |
-| `BG_COLOR` | `str` | `"#0D1117"` | 标准背景色（深太空蓝），推荐作为全局 `background_color`。 |
-| `COLOR_WHITE` | `str` | `"#FFFFFF"` | 纯白色。 |
-| `COLOR_ELLIPSE` | `str` | `"#00E5FF"` | 主题强调色（赛博蓝），常用于核心图形与高亮描边。 |
-| `COLOR_GRID` | `str` | `"#1A2639"` | 暗蓝色，专用于底层坐标网格，低对比度以防喧宾夺主。 |
-| `COLOR_TITLE` | `tuple`| `("#00E5FF", "#0077FF")` | 标准标题渐变色（青至蓝的过渡）。 |
-| `TEXT` | `str` | `"#E6E6E6"` | 标准正文颜色（高亮灰），相较纯白在深色背景下更护眼。 |
-| `BILI_LIKE` | `str` | `"#FB7299"` | B站标准点赞粉色。 |
-| `BILI_COIN` | `str` | `"#F5A623"` | B站标准投币金色。 |
-| `BILI_FAVO` | `str` | `"#FFC107"` | B站标准收藏黄色。 |
-| `ENDING_FALLBACK` | `tuple` | `("#FF69B4", "#FF69B4", "#FF69B4")` | 非B站模式片尾配色（粉红 / PINK）。 |
-
-### 使用示例
-
-```python
-from manim import Text, BOLD
-from manim_singularity import NeonTheme
-
-# 使用主题自带的渐变色和正文色
-title = Text("神经网络", weight=BOLD).set_color_by_gradient(*NeonTheme.COLOR_TITLE)
-text = Text("普通正文", color=NeonTheme.TEXT)
-```
-
----
-
-## 2. `SingularityIP` 类
-`theme` 模块提供了奇点 IP 的核心视觉资产，包含预设片头转场引擎（`SingularityIP`）以及标准化的科幻网格场景基类（`EllipseBase`）。
-
-**主题颜色系统已迁移至 `manim_singularity.color`（chroma_vault）**，统一通过模块级单例 `theme` 实例访问。详见 [`docs/color.md`](color.md)。
+**主题颜色系统由 `manim_singularity.color`（chroma_vault）统一管理**，详见 [`docs/color.md`](color.md)。
 
 ---
 
@@ -89,7 +52,7 @@ class IntroExample(Scene):
 
 **描述**：标准科幻网格场景基类，继承自 Manim 的 `ThreeDScene`。任何需要绘制网格、函数的数学演示场景，均应直接继承此类而非基础 `Scene`。
 
-该基类在其生命周期的 `setup()` 阶段，会自动将背景设为 `theme.BG`，并实例化一个标准坐标平面 `self.grid`。
+该基类在其生命周期的 `setup()` 阶段，会自动将背景设为 `theme.SCENE_BACKGROUND_COLOR`，并实例化一个标准坐标平面 `self.grid`。
 
 ### 属性 (Attributes)
 
@@ -150,47 +113,19 @@ class GridExample(EllipseBase):
 
 ---
 
-## 4. `EndingCard` 类
+## 3. `EndingCard` 类
 
-**描述**：B站风格"一键三连"片尾卡片动画组件。支持三种场景变换模式、B站波浪点亮及呼吸心跳收尾。
+**描述**：奇点 IP 片尾三连卡片（点赞、投币、收藏图标）。
+
+支持三种场景变换模式（汇聚 A / 变形 B / 分配 C）、图标逐一点亮动画以及文字心跳效果。从 `assets/svg/` 加载 SVG 图标，不存在时自动使用圆形回退。
 
 ### `__init__(self, scene, exclude_mobjects=None)`
 
-- **`scene`**: 当前 `Scene` 实例。
-- **`exclude_mobjects`** (`list`, 可选): 不希望被动画清理的物体列表（如水印、标题）。
+- `scene`: 当前 Manim Scene。
+- `exclude_mobjects`: 变换中要排除的物件列表。
 
-### `play_ending(self, mode="A", bilibili_style=True)`
+### `play_ending(self, mode="A")`
 
-- **`mode`** (`"A"`|`"B"`|`"C"`, 默认 `"A"`):
-  - `A` — **汇聚重生**：所有物体吸入中心 → 闪光 → 图标弹性爆出。
-  - `B` — **形态变换**：按 x 坐标左/中/右三区，原地变形为对应图标。
-  - `C` — **按位分配**：x 排序后均分三组，每组聚合并变形。
-- **`bilibili_style`** (`bool`, 默认 `True`): 是否使用 B站风格波浪式点亮（依次弹跳 + 变色 + 发光）。
+播放完整片尾动画：场景变换 → 图标点亮 → 文字心跳。
 
-### 使用示例
-
-```python
-from manim import Scene, Text, Circle, Dot, VGroup, RED, GREEN
-from manim_singularity import EndingCard
-
-class TestEnding(Scene):
-    def construct(self):
-        title = Text("演示场景").to_edge(UP)
-        self.add(title)
-
-        mobs = VGroup(
-            Circle(color=RED, fill_opacity=0.5).shift(UL * 3),
-            Dot(color=GREEN).shift(DR * 3),
-        )
-        self.play(FadeIn(mobs))
-        self.wait(1)
-
-        card = EndingCard(self, exclude_mobjects=[title])
-        card.play_ending(mode="A", bilibili_style=True)
-        self.wait(2)
-```
-
-### 设计说明
-
-- SVG 图标存放于 `manim_singularity/svg/`（`good.svg` / `coin.svg` / `favo.svg`），缺失时自动降级为白色圆形占位。
-- `_safe_set_glow` 对 Manim 版本做防御性兼容，不支持 `set_glow` 时静默跳过。
+- `mode`: `"A"` 汇聚、`"B"` 变形、`"C"` 分配。
