@@ -18,4 +18,3 @@ chroma = "manim_singularity.color.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["manim_singularity*"]

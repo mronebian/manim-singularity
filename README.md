@@ -6,9 +6,10 @@
 
 本项目主要封装了以下核心模块：
 
-1. **视觉主题 (`theme`)**
-   - 包含 `NeonTheme` 全局色彩规范。
-   - 提供标准化的 UI 组件生成工具（如 Header 等）。
+1. **色彩系统 (`color`)**
+   - SQLite 数据库驱动，CLI 管理颜色和主题。
+   - 全局单例 `theme`，支持 `theme.use("Name")` 切换整套配色。
+   - `create-theme` / `delete-theme` 自动生成类型文件，LSP 可补全主题名。
 
 2. **动画引擎 (`SingularityIP`)**
    - 品牌开场动画。

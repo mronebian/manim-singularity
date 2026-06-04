@@ -1,6 +1,6 @@
-"""Neon 主题全局单例。
+"""可切换的主题全局单例。
 
-Global Neon theme singleton.
+Switchable theme singleton.
 
 颜色只从数据库加载，不内置任何 seed/fallback。
 使用 chroma init 创建数据库后，手动添加颜色并绑定角色。
@@ -9,6 +9,7 @@ Global Neon theme singleton.
 from typing import Optional
 
 from ._db import ColorDB
+from ._theme_names import ThemeName
 
 
 class _NeonTheme:
@@ -16,7 +17,8 @@ class _NeonTheme:
 
     Color cache singleton that powers the color.X syntax.
 
-    数据库无 "Neon" 主题时 _cache 保持空，
+    默认加载 "Neon" 主题，可通过 use(name) 切换到其他主题。
+    数据库无指定主题时 _cache 保持空，
     访问任意颜色角色都会抛出 AttributeError。
     """
 
@@ -54,31 +56,47 @@ class _NeonTheme:
     WHITE_COLOR: str
     BLACK_COLOR: str
 
-    def __init__(self) -> None:
+    def __init__(self, name: str = "Neon") -> None:
         self._db: Optional[ColorDB] = None
+        self._name: str = name
         self._cache: dict[str, str] = {}
         self._load()
 
+    @property
+    def theme_name(self) -> str:
+        """返回当前加载的主题名称。"""
+        return self._name
+
     def _load(self) -> None:
-        """连接数据库并加载 "Neon" 主题到缓存。
+        """连接数据库并加载当前主题到缓存。
 
-        Connect to the database and cache the "Neon" theme.
-
-        主题不存在时保持空缓存，不写库、不抛异常。
+        Connect to the database and cache the current theme.
         """
         try:
             self._db = ColorDB()
-            theme_data = self._db.get_theme("Neon")
+            theme_data = self._db.get_theme(self._name)
             if theme_data:
                 for role_lower, record in theme_data.items():
                     self._cache[role_lower.upper() + "_COLOR"] = record.hex_code
         except Exception:
             self._db = None
 
-    def reload(self) -> None:
-        """清空缓存并重新从数据库加载。
+    def use(self, name: ThemeName) -> None:
+        """切换到指定主题，清空缓存并重新加载。
 
-        Clear the cache and reload from the database.
+        Switch to a different theme, clearing cache and reloading.
+
+        Args:
+            name: 数据库中的主题名称。
+        """
+        self._cache.clear()
+        self._name = name
+        self._load()
+
+    def reload(self) -> None:
+        """清空缓存并重新从数据库加载当前主题。
+
+        Clear the cache and reload the current theme from the database.
         """
         self._cache.clear()
         self._load()
@@ -88,7 +106,7 @@ class _NeonTheme:
             return self._cache[role]
         raise AttributeError(
             f"'NeonTheme' has no color role '{role}' — "
-            f"make sure 'Neon' theme exists in DB with all required roles.\n"
+            f"make sure '{self._name}' theme exists in DB with all required roles.\n"
             f"Available: {', '.join(sorted(self._cache)) if self._cache else '(empty)'}"
         )
 

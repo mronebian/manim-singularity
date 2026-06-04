@@ -18,14 +18,15 @@ graph TB
     end
 
     subgraph API["对外接口"]
-        CI["color/__init__.py<br/>color.PRIMARY_FILL_COLOR<br/>color.title_gradient()"]
-        TOP["manim_singularity/__init__.py<br/>from manim_singularity import color"]
+        CI["color/__init__.py<br/>color.TITLE_COLOR<br/>color.title_gradient()"]
+        TOP["manim_singularity/__init__.py<br/>from manim_singularity import color, theme"]
     end
 
     subgraph CORE["核心层"]
-        NT["neon_theme.py<br/>_NeonTheme 单例<br/>_cache + reload"]
+        NT["neon_theme.py<br/>_NeonTheme 单例<br/>_cache + use() + reload()"]
         DB["_db.py<br/>ColorDB<br/>ColorRecord<br/>hex→rgb→hsl→luminance"]
         NT_CACHE["_cache 读缓存"]
+        LSP["_theme_names.py<br/>Auto-generated Literal<br/>→ LSP 补全 theme.use()"]
     end
 
     subgraph MANIM["Manim 适配层"]
@@ -36,8 +37,8 @@ graph TB
         SQL[(assets/colors.db<br/>SQLite 5 张表)]
     end
 
-    CODE -->|color.PRIMARY_FILL_COLOR| CI
-    CODE -->|from manim_singularity import color| TOP
+    CODE -->|theme.PRIMARY_FILL_COLOR| CI
+    CODE -->|from manim_singularity import theme| TOP
     CLI -->|chroma add list search stats| DB
 
     TOP -.->|__getattr__ 懒加载| CI
@@ -46,15 +47,18 @@ graph TB
 
     NT -->|_load 查询| DB
     NT ---> NT_CACHE
+    NT -->|use() 参数类型| LSP
 
+    CLI -->|create-theme / delete-theme| DB
     DB -->|建表 增删查| SQL
+    CLI -.->|同步主题名| LSP
 ```
 
 ### 调用流程
 
 ```
 首次使用（数据库已有 Neon 主题）：
-  color.PRIMARY_FILL_COLOR
+  theme.PRIMARY_FILL_COLOR
     → __getattr__ → _NeonTheme.__getattr__
     → _cache 未命中 → _load() 从 DB 加载 "Neon" 主题
     → _cache["PRIMARY_FILL_COLOR"] = "#00E5FF"
@@ -63,9 +67,15 @@ graph TB
 第二次：
   _cache 直接命中 → 不碰数据库
 
-数据库无 Neon 主题时 → 抛出 AttributeError
+切换主题：
+  theme.use("Nature")
+    → 清空 _cache
+    → 设置 _name = "Nature"
+    → _load() 从 DB 加载 "Nature" 主题
 
-color.reload() → 清空 _cache → 重新 _load()
+数据库无当前主题时 → 抛出 AttributeError
+
+theme.reload() → 清空 _cache → 重新 _load()
 ```
 
 ---
@@ -73,11 +83,15 @@ color.reload() → 清空 _cache → 重新 _load()
 ## 快速开始
 
 ```python
-from manim_singularity import color
+from manim_singularity import theme
 
-circle.set_color(color.PRIMARY_FILL_COLOR)
-title.set_color_by_gradient(*color.title_gradient())
-body.set_color(color.BODY_TEXT_COLOR)
+circle.set_color(theme.PRIMARY_FILL_COLOR)
+title.set_color_by_gradient(*theme.title_gradient())
+body.set_color(theme.BODY_TEXT_COLOR)
+
+# 支持多主题切换（LSP 自动补全主题名）
+theme.use("Neon")
+theme.use("Nature")
 ```
 
 ---
@@ -139,41 +153,47 @@ body.set_color(color.BODY_TEXT_COLOR)
 ### 便捷方法
 
 ```python
-color.title_gradient()   # → ("#00E5FF", "#0077FF") = (TITLE_COLOR, TITLE_GRADIENT_END_COLOR)
-color.reload()           # → 清空缓存重新加载
+theme.title_gradient()      # → ("#00E5FF", "#0077FF") = (TITLE_COLOR, TITLE_GRADIENT_END_COLOR)
+theme.reload()              # → 清空缓存重新加载当前主题
+theme.use("Neon")           # → 切换到指定主题（LSP 会自动补全数据库中的主题名）
+theme.theme_name            # → "Neon"（返回当前主题名）
 ```
 
 ### 使用示例
 
 ```python
 from manim import Scene, Text, Circle, MathTex, NumberPlane, Flash
-from manim_singularity import color
+from manim_singularity import theme
 
 # 场景
-scene.camera.background_color = color.SCENE_BACKGROUND_COLOR
+scene.camera.background_color = theme.SCENE_BACKGROUND_COLOR
 
 # 网格
-grid = NumberPlane(background_line_style={"stroke_color": color.GRID_LINE_COLOR})
+grid = NumberPlane(background_line_style={"stroke_color": theme.GRID_LINE_COLOR})
 
 # 图形
-circle = Circle(color=color.PRIMARY_FILL_COLOR)
-orbit = Ellipse(color=color.ORBIT_STROKE_COLOR)
-ring = Circle(color=color.RING_STROKE_COLOR)
-icon = SVGMobject("path.svg").set_fill(color.ICON_FILL_COLOR)
+circle = Circle(color=theme.PRIMARY_FILL_COLOR)
+orbit = Ellipse(color=theme.ORBIT_STROKE_COLOR)
+ring = Circle(color=theme.RING_STROKE_COLOR)
+icon = SVGMobject("path.svg").set_fill(theme.ICON_FILL_COLOR)
 
 # 文字
-title = Text("标题").set_color_by_gradient(*color.title_gradient())
-infinity = MathTex(r"\infty", color=color.INFINITY_COLOR)
-tagline = Text("Infinity", color=color.TAGLINE_COLOR)
-body = Text("正文", color=color.BODY_TEXT_COLOR)
-muted = Text("备注", color=color.MUTED_TEXT_COLOR)
+title = Text("标题").set_color_by_gradient(*theme.title_gradient())
+infinity = MathTex(r"\infty", color=theme.INFINITY_COLOR)
+tagline = Text("Infinity", color=theme.TAGLINE_COLOR)
+body = Text("正文", color=theme.BODY_TEXT_COLOR)
+muted = Text("备注", color=theme.MUTED_TEXT_COLOR)
 
 # 语义
-success = Text("成功", color=color.SUCCESS_COLOR)
-danger = Text("错误", color=color.DANGER_COLOR)
+success = Text("成功", color=theme.SUCCESS_COLOR)
+danger = Text("错误", color=theme.DANGER_COLOR)
 
 # 特效
-Flash(ORIGIN, color=color.SCENE_FLASH_COLOR)
+Flash(ORIGIN, color=theme.SCENE_FLASH_COLOR)
+
+# 切换整套配色
+theme.use("Neon")
+theme.use("Nature")
 ```
 
 ### 角色与 Manim 对象对照
@@ -343,6 +363,11 @@ chroma set-role "Neon" background background
 chroma list-themes
 ```
 
+> `create-theme` 和 `delete-theme` 执行后会自动更新 `_theme_names.py`，
+> 使 `theme.use()` 获得 LSP 补全。新增主题后需重启语言服务器：
+> - VSCode: `Developer: Reload Window`
+> - Neovim: `:LspRestart`
+
 ### 删除操作
 
 ```bash
@@ -386,8 +411,8 @@ chroma set-role "Neon" primary_fill primary_fill
 ### 验证
 
 ```python
-from manim_singularity import color
-print(color.PRIMARY_FILL_COLOR)   # → #00E5FF
+from manim_singularity import theme
+print(theme.PRIMARY_FILL_COLOR)   # → #00E5FF
 ```
 
 ---

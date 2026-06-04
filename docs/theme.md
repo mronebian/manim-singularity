@@ -2,7 +2,9 @@
 
 `theme` 模块提供了奇点 IP 的核心视觉资产，包含预设片头转场引擎（`SingularityIP`）、标准化的科幻网格场景基类（`EllipseBase`）以及片尾三连卡片（`EndingCard`）。
 
-**主题颜色系统由 `manim_singularity.color`（chroma_vault）统一管理**，详见 [`docs/color.md`](color.md)。
+**主题颜色系统由 `manim_singularity.color`（ChromaVault）统一管理**，详见 [`docs/color.md`](color.md)。
+
+所有组件（`SingularityIP`、`EllipseBase`、`EndingCard`）内部使用全局 `theme` 单例，调用 `theme.use("Nature")` 即可切换整套配色。
 
 ---
 
