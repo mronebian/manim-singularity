@@ -44,7 +44,7 @@ theme = _theme
 
 def __getattr__(name: str):
     if name == "Theme":
-        from .theme.engine import Theme
+        from ._baker import Theme
         return Theme
     return getattr(_theme, name)
 

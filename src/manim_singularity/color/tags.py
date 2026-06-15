@@ -1,3 +1,9 @@
+"""标签分类枚举与标准标签常量。
+
+Tag category enumeration and standard tag constants.
+
+用于 color 数据库的颜色标签分类系统。
+"""
 from enum import Enum, auto
 
 

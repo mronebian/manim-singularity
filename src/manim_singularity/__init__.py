@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .voiceover import VoiceOver as VoiceOver
-    from .theme import (
+    from .animation_singularity import (
         SingularityIP as SingularityIP,
         EllipseBase as EllipseBase,
         EndingCard as EndingCard,
@@ -59,7 +59,7 @@ def __getattr__(name: str):
         from .voiceover import VoiceOver
         return VoiceOver
     if name in ("SingularityIP", "EllipseBase", "EndingCard"):
-        from .theme import SingularityIP, EllipseBase, EndingCard
+        from .animation_singularity import SingularityIP, EllipseBase, EndingCard
         return locals()[name]
     if name == "Theme":
         from .color import Theme

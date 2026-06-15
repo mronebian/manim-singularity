@@ -15,22 +15,23 @@ graph TB
     subgraph USER["用户层"]
         CODE[Manim 脚本]
         CLI[chroma 命令]
+        LSP["_theme_names.py<br/>Auto-generated Literal<br/>-> LSP 补全 theme.use()"]
     end
 
     subgraph API["对外接口"]
-        CI["color/__init__.py<br/>color.TITLE_COLOR<br/>color.title_gradient()"]
+        CI["color/__init__.py<br/>theme.TITLE_COLOR<br/>theme.title_gradient()"]
         TOP["manim_singularity/__init__.py<br/>from manim_singularity import color, theme"]
     end
 
     subgraph CORE["核心层"]
         NT["neon_theme.py<br/>_NeonTheme 单例<br/>_cache + use() + reload()"]
-        DB["_db.py<br/>ColorDB<br/>ColorRecord<br/>hex→rgb→hsl→luminance"]
+        DB["_db.py<br/>ColorDB + ColorRecord<br/>hex->rgb->hsl->luminance"]
         NT_CACHE["_cache 读缓存"]
-        LSP["_theme_names.py<br/>Auto-generated Literal<br/>→ LSP 补全 theme.use()"]
+        TAGS["tags.py<br/>TagCategory + StandardTags"]
     end
 
     subgraph MANIM["Manim 适配层"]
-        TE["theme/engine.py<br/>Theme 烘焙引擎<br/>17 个显式 ManimColor 属性"]
+        TE["_baker.py<br/>Theme 烘焙引擎<br/>21 个显式 ManimColor 属性"]
     end
 
     subgraph STORE["持久化"]
@@ -47,7 +48,7 @@ graph TB
 
     NT -->|_load 查询| DB
     NT ---> NT_CACHE
-    NT -->|use() 参数类型| LSP
+    NT -.->|use 参数引用| LSP
 
     CLI -->|create-theme / delete-theme| DB
     DB -->|建表 增删查| SQL
@@ -303,7 +304,7 @@ record.to_manim_color()  # → ManimColor
 
 将 `ColorDB` 主题烘焙为 `ManimColor`。**需要 manim**。
 
-17 个标准化属性，命名与 `color` 颜色库一致：
+21 个标准化属性，命名与 `color` 颜色库一致：
 
 ```python
 from manim_singularity import ColorDB, Theme
@@ -358,9 +359,20 @@ chroma stats
 ### 主题操作
 
 ```bash
-chroma create-theme "赛博蓝夜" --desc "暗色科技风"
-chroma set-role "Neon" background background
+chroma create-theme "Neon" --desc "霓虹科技风"
+chroma set-role "Neon" scene_background DarkBg
 chroma list-themes
+chroma show-theme "Neon"
+```
+
+`show-theme` 输出示例：
+
+```
+Theme: Neon
+  SCENE_BACKGROUND_COLOR    #0A0E27
+  SCENE_FLASH_COLOR         #7B2EDA
+  PRIMARY_FILL_COLOR        #3B82F6
+  ...
 ```
 
 > `create-theme` 和 `delete-theme` 执行后会自动更新 `_theme_names.py`，
@@ -380,7 +392,7 @@ chroma delete-theme "Neon"          # 删除主题
 ## 6. 标签系统
 
 ```python
-from manim_singularity.color.core.tags import TagCategory, StandardTags
+from manim_singularity.color.tags import TagCategory, StandardTags
 
 StandardTags.HUE_BLUE     # ("blue", TagCategory.HUE)
 StandardTags.MOOD_TECH    # ("tech", TagCategory.MOOD)
@@ -405,7 +417,7 @@ chroma add primary_fill "#00E5FF"
 chroma create-theme "Neon"
 chroma set-role "Neon" background background
 chroma set-role "Neon" primary_fill primary_fill
-# ... 全部 17 个角色
+# ... 全部 21 个角色
 ```
 
 ### 验证

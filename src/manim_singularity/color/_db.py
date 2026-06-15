@@ -655,6 +655,75 @@ class ColorDB:
                     (color_row["id"], tag_row["id"]),
                 )
 
+    def replace(
+        self,
+        name: str,
+        hex_code: str,
+        tags: Optional[list[str]] = None,
+        source: Optional[str] = None,
+        notes: Optional[str] = None,
+    ) -> int:
+        """覆盖已存在的颜色（UPDATE，保留 color_id 和主题绑定）。
+
+        Replace an existing color (UPDATE, preserving color_id and theme bindings).
+
+        UPDATE 方式更改 hex 和计算字段，清空旧标签后重新插入新标签。
+        外键引用的 theme_colors 不受影响。
+
+        Args:
+            name: 颜色名称。
+            hex_code: 十六进制色值。
+            tags: 标签字符串列表，可选。
+            source: 来源描述，可选。
+            notes: 备注文本，可选。
+
+        Returns:
+            该颜色的 color_id。
+        """
+        comp = self._compute(hex_code)
+        with self._conn:
+            # 查找已有颜色，保留 color_id 不变（避免外键关联丢失）
+            row = self._conn.execute(
+                "SELECT id FROM colors WHERE name = ?", (name,)
+            ).fetchone()
+            if not row:
+                raise ValueError(f"Color '{name}' not found")
+            color_id = row["id"]
+            # UPDATE 而非 DELETE+INSERT，保护 theme_colors 外键引用
+            self._conn.execute(
+                """
+                UPDATE colors SET
+                    hex_code = ?, rgb_r = ?, rgb_g = ?, rgb_b = ?,
+                    hsl_h = ?, hsl_s = ?, hsl_l = ?, wcag_luminance = ?,
+                    source = ?, notes = ?
+                WHERE id = ?
+            """,
+                (
+                    hex_code,
+                    comp["rgb_r"], comp["rgb_g"], comp["rgb_b"],
+                    comp["hsl_h"], comp["hsl_s"], comp["hsl_l"],
+                    comp["wcag_luminance"],
+                    source, notes,
+                    color_id,
+                ),
+            )
+            # 清空旧标签，重新插入新标签
+            self._conn.execute(
+                "DELETE FROM color_tags WHERE color_id = ?", (color_id,)
+            )
+            if tags:
+                for tag_name in tags:
+                    self._ensure_tag(tag_name)
+                    tag_row = self._conn.execute(
+                        "SELECT id FROM tags WHERE name = ?", (tag_name,)
+                    ).fetchone()
+                    if tag_row:
+                        self._conn.execute(
+                            "INSERT OR IGNORE INTO color_tags (color_id, tag_id) VALUES (?, ?)",
+                            (color_id, tag_row["id"]),
+                        )
+            return color_id
+
     def delete_color(self, name: str) -> bool:
         """按名称删除颜色。
 

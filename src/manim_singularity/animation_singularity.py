@@ -370,7 +370,7 @@ class EndingCard:
         card.play_ending(mode="A")
     """
 
-    _SVG_DIR: str = os.path.join(os.path.dirname(__file__), "..", "assets", "svg")
+    _SVG_DIR: str = os.path.join(os.path.dirname(__file__), "..", "..", "assets", "svg")
 
     def __init__(self, scene: Scene, exclude_mobjects: Optional[list] = None) -> None:
         """初始化片尾卡片。
@@ -421,23 +421,10 @@ class EndingCard:
 
     def _collect_mobjects(self):
         excluded_types = (NumberPlane, Axes, ThreeDAxes)
-        mobs = []
-        for m in self.scene.mobjects:
-            if isinstance(m, excluded_types):
-                continue
-            if m in self.exclude_mobjects:
-                continue
-            is_visible = True
-            has_fill = hasattr(m, "fill_opacity")
-            has_stroke = hasattr(m, "stroke_opacity")
-            if has_fill or has_stroke:
-                fill_op = getattr(m, "fill_opacity", 0)
-                stroke_op = getattr(m, "stroke_opacity", 0)
-                if (fill_op or 0) < 0.01 and (stroke_op or 0) < 0.01:
-                    is_visible = False
-            if is_visible:
-                mobs.append(m)
-        return mobs
+        return [
+            m for m in self.scene.mobjects
+            if not isinstance(m, excluded_types) and m not in self.exclude_mobjects
+        ]
 
     # ── 公共入口 ──────────────────────────────────
 
@@ -607,7 +594,7 @@ class EndingCard:
         self.scene.play(Write(text), run_time=0.6)
         self.scene.play(Write(comment), run_time=0.5)
 
-        palette = [theme.PRIMARY_FILL_COLOR, theme.SUCCESS_COLOR, theme.WHITE_COLOR]
+        palette = [theme.PRIMARY_FILL_COLOR, theme.SUCCESS_COLOR, theme.ACCENT_FILL_COLOR]
 
         self.scene.play(
             *[

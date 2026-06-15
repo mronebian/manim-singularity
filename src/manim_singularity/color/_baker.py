@@ -1,12 +1,15 @@
 """主题烘焙引擎。
 
 Theme baking engine.
+
+将 ColorDB 数据库主题烘焙为 ManimColor 实例。
+需要 manim 库，与零依赖的 _NeonTheme 单例并存。
 """
 from typing import Optional
 
 from manim import ManimColor
 
-from .._db import ColorDB
+from ._db import ColorDB
 
 _REQUIRED_ROLES = [
     "scene_background", "scene_flash",
