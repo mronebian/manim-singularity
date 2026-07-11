@@ -17,6 +17,7 @@ if TYPE_CHECKING:
         EllipseBase as EllipseBase,
         EndingCard as EndingCard,
     )
+    from .formula_board import FormulaBoard as FormulaBoard
     from .color import (
         ColorDB as ColorDB,
         ColorRecord as ColorRecord,
@@ -34,6 +35,7 @@ __all__ = [
     "SingularityIP",
     "EllipseBase",
     "EndingCard",
+    "FormulaBoard",
 ]
 
 # ── 零 manim 依赖，静态导入 ──
@@ -61,6 +63,9 @@ def __getattr__(name: str):
     if name in ("SingularityIP", "EllipseBase", "EndingCard"):
         from .animation_singularity import SingularityIP, EllipseBase, EndingCard
         return locals()[name]
+    if name == "FormulaBoard":
+        from .formula_board import FormulaBoard
+        return FormulaBoard
     if name == "Theme":
         from .color import Theme
         return Theme
