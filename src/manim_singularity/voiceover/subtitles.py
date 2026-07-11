@@ -4,9 +4,10 @@ Subtitle system.
 
 全参数化字幕引擎，支持自定义字体、颜色、渐变、入场/退场动画。
 """
-from typing import Any, Callable, Optional, Tuple
+import re
+from typing import Any, Callable, Optional, Tuple, Union
 
-from manim import BOLD, DOWN, FadeOut, Scene, Text, Write
+from manim import BOLD, DOWN, FadeOut, MathTex, RIGHT, Scene, Text, VGroup, Write
 
 
 class SubtitleSystem:
@@ -77,29 +78,61 @@ class SubtitleSystem:
         self.line_spacing = line_spacing
         self.add_fixed_in_frame = add_fixed_in_frame
 
-    def create_subtitle(self, text: str) -> Text:
-        """创建字幕 Text 对象。
+    def create_subtitle(self, text: str) -> Union[Text, MathTex, VGroup]:
+        """创建字幕对象（自动识别内联 LaTeX）。
 
-        Create a subtitle Text object.
+        Create a subtitle object (auto-detect inline LaTeX).
+
+        支持内联 $...$ 公式：纯文本 → Text，
+        纯公式 $...$ → MathTex，混合 $...$ 公式 + 文本 → VGroup。
+
+        Supports inline $...$ formulas: pure text → Text,
+        pure formula $...$ → MathTex, mixed → VGroup.
 
         Args:
-            text: 字幕文本。
+            text: 字幕文本 / 可含内联 $...$ 公式的文本。
 
         Returns:
-            已着色并定位的 Text 对象。
+            已着色并定位的 Text、MathTex 或 VGroup 对象。
         """
-        kwargs = {
-            "font_size": self.font_size,
-            "line_spacing": self.line_spacing,
-            "weight": self.weight,
-        }
-        if self.font is not None:
-            kwargs["font"] = self.font
+        dollar_count = text.count("$")
 
-        mob = Text(text, **kwargs).to_edge(self.position, buff=self.buff)
-        mob._is_subtitle = True
+        if dollar_count >= 2 and dollar_count % 2 == 0:
+            segments = re.split(r"(\$[^$]*\$)", text)
+            parts = []
+            for i, seg in enumerate(segments):
+                if not seg:
+                    continue
+                if i % 2 == 0:
+                    kwargs = {
+                        "font_size": self.font_size,
+                        "line_spacing": self.line_spacing,
+                        "weight": self.weight,
+                    }
+                    if self.font is not None:
+                        kwargs["font"] = self.font
+                    mob = Text(seg, **kwargs)
+                else:
+                    tex = seg[1:-1]
+                    mob = MathTex(tex, font_size=self.font_size + 10)
+                mob._is_subtitle = True
+                parts.append(mob)
 
-        if self.t2c is not None:
+            mob = VGroup(*parts).arrange(RIGHT, buff=0.12)
+            mob._is_subtitle = True
+            mob.to_edge(self.position, buff=self.buff)
+        else:
+            kwargs = {
+                "font_size": self.font_size,
+                "line_spacing": self.line_spacing,
+                "weight": self.weight,
+            }
+            if self.font is not None:
+                kwargs["font"] = self.font
+            mob = Text(text, **kwargs).to_edge(self.position, buff=self.buff)
+            mob._is_subtitle = True
+
+        if self.t2c is not None and hasattr(mob, "set_color_by_t2c"):
             mob.set_color_by_t2c(self.t2c)
         elif self.color is not None:
             mob.set_color(self.color)
