@@ -4,10 +4,25 @@ Subtitle system.
 
 全参数化字幕引擎，支持自定义字体、颜色、渐变、入场/退场动画。
 """
+
 import re
 from typing import Any, Callable, Optional, Tuple, Union
 
-from manim_singularity.compat import BOLD, DOWN, FadeIn, FadeOut, MathTex, RIGHT, Scene, Text, VGroup, IS_MANIM_GL, fix_in_frame, unfix_from_frame, set_color_by_t2c
+from manim_singularity.compat import (
+    BOLD,
+    DOWN,
+    FadeIn,
+    FadeOut,
+    MathTex,
+    RIGHT,
+    Scene,
+    Text,
+    VGroup,
+    IS_MANIM_GL,
+    fix_in_frame,
+    unfix_from_frame,
+    set_color_by_t2c,
+)
 
 
 class SubtitleSystem:
@@ -191,10 +206,10 @@ class SubtitleSystem:
         """
         if self.add_fixed_in_frame:
             if IS_MANIM_GL:
-                self.scene.add(mob)
                 fix_in_frame(mob)
-        else:
-            self.scene.add(mob)
+                self.scene.add(mob)
+            else:
+                self.scene.add(mob)
 
     def remove_from_scene(self, mob: Text) -> None:
         """从场景移除字幕对象。
