@@ -14,7 +14,7 @@ import wave
 from typing import Any, Dict, Optional
 
 import edge_tts
-from manim import logger
+from manim_singularity.compat import logger
 
 from .core import get_cache_dir
 

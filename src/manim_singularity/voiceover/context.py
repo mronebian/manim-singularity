@@ -6,7 +6,7 @@ Audio-visual sync context manager.
 """
 from typing import Any, Dict, Optional
 
-from manim import Scene, Text
+from manim_singularity.compat import Scene, Text, get_scene_time
 
 from .core import AudioCore
 from .subtitles import SubtitleSystem
@@ -68,7 +68,7 @@ class AudioContext:
         self.audio_core.add_sound(
             self.audio_data["path"], time_offset=self.offset
         )
-        self.start_time = self.scene.renderer.time
+        self.start_time = get_scene_time(self.scene)
 
         if self.show_subtitles and self.text:
             self.subtitle_mob = self.subtitle_system.create_subtitle(self.text)
@@ -93,7 +93,7 @@ class AudioContext:
         if exc_type is not None:
             return False
 
-        elapsed_time = self.scene.renderer.time - self.start_time
+        elapsed_time = get_scene_time(self.scene) - self.start_time
         fade_time = self.subtitle_system.exit_run_time if self.subtitle_mob is not None else 0.0
         remaining_time = (self.duration + self.offset) - elapsed_time - fade_time
 

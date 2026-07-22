@@ -7,7 +7,7 @@ Subtitle system.
 import re
 from typing import Any, Callable, Optional, Tuple, Union
 
-from manim import BOLD, DOWN, FadeOut, MathTex, RIGHT, Scene, Text, VGroup, Write
+from manim_singularity.compat import BOLD, DOWN, FadeIn, FadeOut, MathTex, RIGHT, Scene, Text, VGroup, IS_MANIM_GL, fix_in_frame, unfix_from_frame, set_color_by_t2c
 
 
 class SubtitleSystem:
@@ -30,7 +30,7 @@ class SubtitleSystem:
         gradient: Tuple[str, str] = ("#00E5FF", "#0077FF"),
         position: Any = DOWN,
         buff: float = 0.5,
-        entrance_animation: Callable = Write,
+        entrance_animation: Callable = FadeIn,
         entrance_run_time: Optional[float] = None,
         exit_animation: Callable = FadeOut,
         exit_run_time: float = 0.3,
@@ -106,9 +106,10 @@ class SubtitleSystem:
                 if i % 2 == 0:
                     kwargs = {
                         "font_size": self.font_size,
-                        "line_spacing": self.line_spacing,
                         "weight": self.weight,
                     }
+                    if not IS_MANIM_GL:
+                        kwargs["line_spacing"] = self.line_spacing
                     if self.font is not None:
                         kwargs["font"] = self.font
                     mob = Text(seg, **kwargs)
@@ -124,16 +125,17 @@ class SubtitleSystem:
         else:
             kwargs = {
                 "font_size": self.font_size,
-                "line_spacing": self.line_spacing,
                 "weight": self.weight,
             }
+            if not IS_MANIM_GL:
+                kwargs["line_spacing"] = self.line_spacing
             if self.font is not None:
                 kwargs["font"] = self.font
             mob = Text(text, **kwargs).to_edge(self.position, buff=self.buff)
             mob._is_subtitle = True
 
-        if self.t2c is not None and hasattr(mob, "set_color_by_t2c"):
-            mob.set_color_by_t2c(self.t2c)
+        if self.t2c is not None:
+            set_color_by_t2c(mob, self.t2c)
         elif self.color is not None:
             mob.set_color(self.color)
         elif self.gradient is not None:
@@ -187,8 +189,12 @@ class SubtitleSystem:
         Args:
             mob: 字幕 Text 对象。
         """
-        if self.add_fixed_in_frame and hasattr(self.scene, "add_fixed_in_frame_mobjects"):
-            self.scene.add_fixed_in_frame_mobjects(mob)
+        if self.add_fixed_in_frame:
+            if IS_MANIM_GL:
+                self.scene.add(mob)
+                fix_in_frame(mob)
+        else:
+            self.scene.add(mob)
 
     def remove_from_scene(self, mob: Text) -> None:
         """从场景移除字幕对象。
@@ -198,5 +204,9 @@ class SubtitleSystem:
         Args:
             mob: 字幕 Text 对象。
         """
-        if self.add_fixed_in_frame and hasattr(self.scene, "remove_fixed_in_frame_mobjects"):
-            self.scene.remove_fixed_in_frame_mobjects(mob)
+        if self.add_fixed_in_frame:
+            if IS_MANIM_GL:
+                unfix_from_frame(mob)
+                self.scene.remove(mob)
+        else:
+            self.scene.remove(mob)

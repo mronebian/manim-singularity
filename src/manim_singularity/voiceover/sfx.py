@@ -8,7 +8,7 @@ import hashlib
 import os
 import subprocess
 
-from manim import Scene, logger
+from manim_singularity.compat import Scene, logger, get_scene_time
 
 from .core import AudioCore, get_cache_dir
 
@@ -133,7 +133,7 @@ class SFXContext:
             SFXContext 实例自身。
         """
         self.audio_core.add_sound(self.path, time_offset=self.time_offset)
-        self.start_time = self.scene.renderer.time
+        self.start_time = get_scene_time(self.scene)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
@@ -146,7 +146,7 @@ class SFXContext:
         """
         if exc_type is not None:
             return False
-        elapsed = self.scene.renderer.time - self.start_time
+        elapsed = get_scene_time(self.scene) - self.start_time
         remaining = self.duration - elapsed
         if remaining > 0.01:
             self.scene.wait(remaining)

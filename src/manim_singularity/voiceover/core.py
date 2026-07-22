@@ -6,7 +6,7 @@ Audio core module.
 """
 import os
 
-from manim import Scene, config
+from manim_singularity.compat import Scene, get_media_dir, get_skip_animations, set_skip_animations, add_sound as _add_sound
 
 
 def get_cache_dir() -> str:
@@ -18,7 +18,7 @@ def get_cache_dir() -> str:
         以 media_dir 为基础的子目录 "voice" 的绝对路径。
     """
     return os.path.abspath(
-        os.path.join(str(config.get_dir("media_dir")), "voice")
+        os.path.join(get_media_dir(), "voice")
     )
 
 
@@ -52,7 +52,7 @@ class AudioCore:
             **kwargs: 传递给 scene.add_sound 的额外参数，
                 如 time_offset（相对于当前场景时间的偏移）、gain（音量增益）。
         """
-        original_skip = self.scene.renderer.skip_animations
-        self.scene.renderer.skip_animations = False
-        self.scene.add_sound(path, **kwargs)
-        self.scene.renderer.skip_animations = original_skip
+        original_skip = get_skip_animations(self.scene)
+        set_skip_animations(self.scene, False)
+        _add_sound(self.scene, path, **kwargs)
+        set_skip_animations(self.scene, original_skip)

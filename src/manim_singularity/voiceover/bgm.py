@@ -10,7 +10,7 @@ import os
 import subprocess
 from typing import Any, Dict, List, Optional
 
-from manim import Scene, logger
+from manim_singularity.compat import Scene, logger, get_scene_time
 
 from .core import AudioCore, get_cache_dir
 
@@ -92,7 +92,7 @@ class BGMController:
         """
         if self._track is None or self._state == "playing":
             return
-        self._play_start_scene_time = self.scene.renderer.time
+        self._play_start_scene_time = get_scene_time(self.scene)
         self._state = "playing"
 
     def pause(self) -> None:
@@ -104,7 +104,7 @@ class BGMController:
         """
         if self._state != "playing":
             return
-        current_time = self.scene.renderer.time
+        current_time = get_scene_time(self.scene)
         duration = current_time - self._play_start_scene_time
 
         if duration > 0:
@@ -164,7 +164,7 @@ class BGMController:
             )
             self.audio_core.add_sound(
                 trimmed_path,
-                time_offset=scene_start - self.scene.renderer.time,
+                time_offset=scene_start - get_scene_time(self.scene),
             )
         self._segments.clear()
 

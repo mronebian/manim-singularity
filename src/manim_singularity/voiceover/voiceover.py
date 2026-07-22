@@ -6,7 +6,7 @@ Main VoiceOver interface class.
 """
 from typing import Any, Dict, Optional
 
-from manim import Scene
+from manim_singularity.compat import Scene
 
 from .bgm import BGMController
 from .context import AudioContext
