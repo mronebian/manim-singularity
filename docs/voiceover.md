@@ -25,7 +25,8 @@ graph TB
     end
 
     subgraph BACKEND["TTS 后端"]
-        EDGE[edge-tts]
+        LOCAL[本地 IndexTTS 服务<br/>local / ssh 一次性批处理]
+        EDGE[edge-tts 回退<br/>VO_BACKEND=edge]
         CACHE[本地 WAV 缓存]
     end
 
@@ -37,7 +38,8 @@ graph TB
     CTX --> AC
     CTX --> SUB
 
-    VM --> EDGE
+    VM --> LOCAL
+    VM -. 回退 .-> EDGE
     VM --> CACHE
 
     AC -->|scene.add_sound| MANIM[(Manim Scene)]
@@ -54,7 +56,10 @@ manim_singularity/
     voiceover.py      # VoiceOver（唯一入口）
     core.py           # AudioCore（音频提交）
     subtitles.py      # SubtitleSystem（字幕渲染）
-    manager.py        # VoiceManager（TTS+缓存）
+    manager.py        # VoiceManager（TTS+缓存+后端选择）
+    presets.py        # 音色预设注册表（voice id→preset/lang）
+    synclib.py        # 缓存键 / AST 收集 / local-ssh 批处理
+    warm_cli.py       # vo-warm CLI（渲染前预生成）
     context.py        # AudioContext（with 块）
     bgm.py            # BGMController（背景音乐）
     sfx.py            # SFXContext（音效 with 块）
@@ -177,11 +182,40 @@ vo2.say_blocking("定制字幕效果")
 
 ## 4. `VoiceManager` 类
 
-TTS 音频生成 + 本地缓存。
+TTS 音频生成 + 本地缓存。每段旁白 = 一个缓存 wav。
 
-- **流程**: `edge-tts` 生成 MP3 → FFmpeg 转码 WAV (PCM s16le, 44.1kHz)
-- **缓存**: 基于朗读文本 + 音色生成 MD5，缓存于 `.voice_cache/`
-- **tts_text**: 支持字幕文字与朗读文字分离
+- **流程**: 缓存 miss 时按后端生成：
+  - 默认 `local`：调 `synclib.ensure_task` → local（arch 上 `uv run` 直接合成）或
+    ssh（拉起 arch → 传 manifest → 批量合成 → rsync 回传），服务端统一归一化为
+    44.1kHz 单声道 PCM WAV。
+  - `VO_BACKEND=edge`：edge-tts 生成 MP3 → FFmpeg 转码（回退）。
+- **缓存**: 基于朗读文本 + preset:lang 生成 MD5 文件名，缓存于 `media_dir/voice`
+  （预生成 `vo-warm` 与运行时共用 `synclib.cache_name`，保证命中）。
+- **tts_text**: 支持字幕文字与朗读文字分离。
+
+### 渲染前自动预热（默认，恢复 edge-tts 时代的"编译即拉取"）
+
+`VoiceOver.__init__` 自动 AST 扫描当前场景 → 缺失语音整片批量生成（一次模型加载），
+之后逐句全部缓存命中。对齐旧版行为，无需手动步骤：
+
+```bash
+manim -ql Code/euler.py EulerFull        # 构造开始即自动批量补齐；重渲染零网络
+VO_AUTO_WARM=0 manim ...                  # 关闭自动预热，改用手动：
+vo-warm Code/euler.py                     # arch 本机手动预生成
+vo-warm Code/euler.py --conn ssh:archlinux # Mac → arch 手动预生成
+```
+
+### 音色预设
+
+| voice id | 引擎 | 参考音 | 说明 |
+|----------|------|--------|------|
+| `brand` | IndexTTS-2.5 | 无 | 无参考快速合成 |
+| `brand-clone` | IndexTTS-2.5 | 固定参考（`examples/voice_01.wav`，替换文件即换音色） | 默认，品牌音稳定可复现 |
+| `v2-clone` | IndexTTS-2 | 固定参考 | 旧版克隆引擎 |
+
+preset 注册表固定两处：`voiceover/presets.py`（客户端：语言/兜底映射）与
+`tts/tools/vo_synth_batch.py`（服务端：引擎/路径）。旧 edge-tts 音色名（如
+`zh-CN-XiaoxiaoNeural`）自动兜底映射到 `brand-clone`。
 
 ---
 

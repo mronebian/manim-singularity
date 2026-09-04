@@ -3,10 +3,14 @@
 Main VoiceOver interface class.
 
 提供 TTS 语音旁白、背景音乐、音效和字幕的统一入口。
+默认在构造时自动预热当前场景的缺失语音（VO_AUTO_WARM=0 关闭）。
 """
+import inspect
+import os
+import sys
 from typing import Any, Dict, Optional
 
-from manim_singularity.compat import Scene
+from manim_singularity.compat import Scene, logger
 
 from .bgm import BGMController
 from .context import AudioContext
@@ -14,6 +18,27 @@ from .core import AudioCore
 from .manager import VoiceManager
 from .sfx import SFXContext, apply_volume, ensure_wav, probe_duration
 from .subtitles import SubtitleSystem
+from .synclib import warm_scene_file
+
+
+def _scene_source_file(scene: Scene) -> Optional[str]:
+    """尽力定位当前渲染的场景源码文件。
+
+    Best-effort resolve of the currently rendered scene source file.
+    """
+    try:
+        mod = inspect.getmodule(type(scene))
+        if mod and getattr(mod, "__file__", None):
+            path = os.path.abspath(mod.__file__)
+            if path.lower().endswith(".py"):
+                return path
+    except Exception:
+        pass
+    # 回退：manim CLI 的第二个位置参数通常是场景文件
+    for arg in sys.argv[1:]:
+        if arg.lower().endswith(".py") and os.path.isfile(arg):
+            return os.path.abspath(arg)
+    return None
 
 
 class VoiceOver:
@@ -41,7 +66,8 @@ class VoiceOver:
 
         Args:
             scene: 当前 Manim Scene 实例。
-            default_voice: 默认 Edge-TTS 音色。
+            default_voice: 默认音色（preset id，如 brand-clone/brand/v2-clone；
+                旧 edge 音色名会自动映射，见 presets.resolve_voice）。
             show_subtitles: 是否显示字幕。
             subtitle_kwargs: 传递给 SubtitleSystem 的参数字典。
         """
@@ -55,6 +81,31 @@ class VoiceOver:
         self.subtitle_system = SubtitleSystem(scene, **sk)
 
         self.bgm = BGMController(scene, self.audio_core)
+
+        self._auto_warm()
+
+    def _auto_warm(self) -> None:
+        """渲染前自动预热当前场景缺失语音（默认开启）。
+
+        Auto-warm missing narration for the current scene before rendering.
+
+        语义对齐旧版 edge-tts"编译即自动拉取"：construct 开始即整片批量生成，
+        之后逐句全部缓存命中。VO_AUTO_WARM=0 关闭；edge 回退后端跳过。
+        任何异常只告警，不打断渲染。
+        """
+        if self.manager.backend != "local":
+            return
+        if os.environ.get("VO_AUTO_WARM", "1") in ("0", "false", "False"):
+            return
+        src = _scene_source_file(self.scene)
+        if not src:
+            logger.warning("VoiceOver: 无法定位场景源码，跳过自动预热")
+            return
+        try:
+            hit, generated = warm_scene_file(src, self.manager.cache_dir)
+            logger.info(f"🎙 自动预热 {os.path.basename(src)}: 命中 {hit} | 新生成 {generated}")
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"VoiceOver 自动预热失败（不影响渲染）: {e}")
 
     def say_blocking(
         self,

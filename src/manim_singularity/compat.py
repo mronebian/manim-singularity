@@ -68,7 +68,7 @@ else:
     from manim import Scene, Text, config, logger
     from manim import MathTex, VGroup, FadeIn, FadeOut
     from manim import DOWN, RIGHT
-    BOLD = "bold"
+    BOLD = "BOLD"
 
     def get_media_dir():
         return str(config.get_dir("media_dir"))
