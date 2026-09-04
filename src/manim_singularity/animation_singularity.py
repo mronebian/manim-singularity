@@ -1,7 +1,29 @@
-import os
-
-from manim import *
+import os, sys
 from typing import Optional
+
+_USING_MANIMGL = "manimlib" in sys.modules
+
+if _USING_MANIMGL:
+    from manimlib import *
+    from manimlib.animation.composition import LaggedStart
+    from manimlib.animation.transform import ReplacementTransform
+    from manimlib.animation.indication import Flash
+    from manimlib.animation.creation import Write
+    from manimlib.mobject.svg.svg_mobject import SVGMobject as _SVGMobject
+    import manimlib.utils.rate_functions as _rf
+
+    class SVGMobject(_SVGMobject):
+        """Wrap ManimGL SVGMobject to match ManimCE-style chained API."""
+        pass
+
+    GRAY = GREY
+
+    rate_functions = _rf
+    rate_functions.ease_out_elastic = _rf.smooth
+    rate_functions.ease_out_back = _rf.smooth
+    rate_functions.ease_in_back = _rf.smooth
+else:
+    from manim import *
 
 from .color import theme
 
@@ -67,7 +89,8 @@ class SingularityIP:
 
         # ---------- 2. 核心绽放 ----------
         infinity = MathTex(r"\infty", font_size=120, color=theme.INFINITY_COLOR)
-        infinity.set_sheen(-0.3, DOWN).set_z_index(4).scale(0.1)
+        infinity.z_index = 4
+        infinity.scale(0.1)
 
         outer_ring = Circle(radius=2.2, color=theme.RING_STROKE_COLOR, stroke_width=4)
         inner_ring = Circle(radius=2.0, color=theme.RING_STROKE_COLOR, stroke_width=1.5)
@@ -216,6 +239,10 @@ class EllipseBase:
                 "stroke_opacity": 0.6,
             },
         )
+        self.grid.z_index = -1
+        self.grid.axes.z_index = -1
+        for line in self.grid.background_lines:
+            line.z_index = -1
 
     def animate_grid_growth(self) -> None:
         """播放网格波浪式展开动画。
