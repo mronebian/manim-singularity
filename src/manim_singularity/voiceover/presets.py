@@ -1,16 +1,26 @@
-"""音色预设注册表（客户端侧）。
+"""音色 / 后端选择注册表（客户端侧）。
 
-Voice preset registry (client side).
+Voice & backend registry (client side).
 
-voice id → {engine, lang, ref} 的语义在服务端 vo_synth_batch.py 的 PRESETS
-固定一版；本表只需要维护：语言推导、缓存键所需的信息，以及旧 edge-tts
-音色名的兼容映射。两边 preset id 必须保持一致。
+语义：
+- voice 只选"音色身份"：
+    * 本地 preset id（brand / brand-clone / v2-clone）或空 → 本地 IndexTTS（arch）
+    * 其它字符串（旧 edge-tts 音色名，如 zh-CN-XiaoxiaoNeural）→ edge-tts 在线合成
+- backend 只选"引擎"（auto/local/edge），与 voice 互不干扰：
+    优先级 逐句 backend= > VoiceOver(backend=) > 环境 VO_BACKEND > auto 启发
+
+引擎语义与 preset 的服务端实现固定于 tts 仓库 tools/vo_synth_batch.py；本表只维护
+客户端所需：preset id、默认语言、缓存版本、判定函数。
 """
+from __future__ import annotations
 
 #: 默认品牌音（含固定参考音频，音色稳定、可复现）。
 DEFAULT_PRESET = "brand-clone"
 
-#: 服务端支持的 preset id（用于校验与缓存键）。
+#: 缓存键版本。更换服务端 REF_AUDIO（品牌参考音）后 +1，让旧缓存自动失效。
+CACHE_VERSION = 1
+
+#: 服务端支持的本地 preset id。
 PRESET_IDS = ("brand", "brand-clone", "v2-clone")
 
 #: preset id → 默认语言。
@@ -20,33 +30,28 @@ PRESET_LANG = {
     "v2-clone": "ZH",
 }
 
-#: 旧 edge-tts 音色名前缀 → (preset id, 语言)。仅兜底用（场景已改为新 id）。
-LEGACY_PREFIX = {
-    "zh-CN": ("brand-clone", "ZH"),
-    "zh-TW": ("brand-clone", "ZH"),
-    "zh-HK": ("brand-clone", "ZH"),
-    "en-US": ("brand-clone", "EN"),
-    "en-GB": ("brand-clone", "EN"),
-    "ja-JP": ("brand-clone", "JA"),
-}
+#: 可用后端。
+BACKENDS = ("auto", "local", "edge")
+
+DEFAULT_LANG = "ZH"
 
 
-def resolve_voice(voice: str) -> tuple[str, str]:
-    """把 voice 字符串解析为 (preset_id, lang)。
+def is_preset(voice: str) -> bool:
+    """voice 是否为本地 IndexTTS preset id。"""
+    return voice in PRESET_IDS
 
-    Resolve a voice string into (preset_id, lang).
 
-    - 已知 preset id → 直接用其默认语言
-    - 旧 edge 音色名（zh-CN-* 等）→ 兼容映射到品牌音 preset + 推导语言
-    - 其它未知值 → 回退到默认 preset（语言按默认）
-    """
-    if not voice:
-        preset = DEFAULT_PRESET
-    elif voice in PRESET_LANG:
-        preset = voice
-    else:
-        for prefix, (mapped, _lang) in LEGACY_PREFIX.items():
-            if voice.startswith(prefix):
-                return mapped, _lang
-        preset = DEFAULT_PRESET
-    return preset, PRESET_LANG[preset]
+def preset_lang(voice: str) -> str:
+    """preset 默认语言（非 preset 返回 DEFAULT_LANG）。"""
+    return PRESET_LANG.get(voice, DEFAULT_LANG)
+
+
+def default_preset_lang() -> tuple[str, str]:
+    """默认 (preset, lang)。"""
+    return DEFAULT_PRESET, DEFAULT_LANG
+
+
+def normalize_backend(backend: str) -> str:
+    """把 backend 归一化为 auto/local/edge 之一。"""
+    b = (backend or "").strip().lower()
+    return b if b in BACKENDS else "auto"
